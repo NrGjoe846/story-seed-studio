@@ -202,11 +202,16 @@ export const Navbar = () => {
       </AnimatePresence>
 
       <nav
+        style={{
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
         className={cn(
-          'fixed left-0 right-0 z-50 transition-all duration-300 border-b',
-          isBannerVisible ? 'top-[40px]' : 'top-0',
+          'fixed left-0 right-0 z-50 border-b',
+          // When scrolled, always move to top-0 (hide banner behind navbar)
+          // When not scrolled, respect banner visibility
+          scrolled ? 'top-0' : (isBannerVisible ? 'top-[40px]' : 'top-0'),
           scrolled
-            ? 'py-2 bg-background/95 backdrop-blur-lg border-border/60 shadow-md'
+            ? 'py-2 bg-white backdrop-blur-lg border-border/60 shadow-md'
             : 'py-4 bg-transparent border-transparent shadow-none'
         )}
       >
