@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -12,7 +14,14 @@ const AdminCreate = () => {
   const [isComplete, setIsComplete] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
+  // Payment state
+  const [paymentEnabled, setPaymentEnabled] = useState(false);
+  const [qrFile, setQrFile] = useState<File | null>(null);
+  const [qrPreview, setQrPreview] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -36,6 +45,18 @@ const AdminCreate = () => {
     }
   };
 
+  const handleQrChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setQrFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setQrPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const removeBanner = () => {
     setBannerFile(null);
     setBannerPreview(null);
@@ -44,40 +65,89 @@ const AdminCreate = () => {
     }
   };
 
+  const removeQr = () => {
+    setQrFile(null);
+    setQrPreview(null);
+    if (qrInputRef.current) {
+      qrInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
+      // QR code is optional - can be added later via edit
+
       let bannerUrl = null;
+      let qrUrl = null;
 
       // Upload banner image if selected
       if (bannerFile) {
-        const fileExt = bannerFile.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('event-banners')
-          .upload(fileName, bannerFile);
+        try {
+          const fileExt = bannerFile.name.split('.').pop();
+          const fileName = `banner-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error('Failed to upload banner image');
+          const { error: uploadError } = await supabase.storage
+            .from('event-banners')
+            .upload(fileName, bannerFile);
+
+          if (uploadError) {
+            console.warn('Banner upload failed, continuing without banner:', uploadError);
+            toast({
+              title: 'Banner Upload Failed',
+              description: 'Event will be created without banner. You can add it later via Edit.',
+              variant: 'default'
+            });
+          } else {
+            const { data: urlData } = supabase.storage
+              .from('event-banners')
+              .getPublicUrl(fileName);
+
+            bannerUrl = urlData.publicUrl;
+          }
+        } catch (bannerError) {
+          console.warn('Banner upload error:', bannerError);
+          // Continue without banner
         }
+      }
 
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('event-banners')
-          .getPublicUrl(fileName);
-        
-        bannerUrl = urlData.publicUrl;
+      // Upload QR image if selected
+      if (paymentEnabled && qrFile) {
+        try {
+          const fileExt = qrFile.name.split('.').pop();
+          const fileName = `qr-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('event-banners')
+            .upload(fileName, qrFile);
+
+          if (uploadError) {
+            console.warn('QR upload failed, continuing without QR:', uploadError);
+            toast({
+              title: 'QR Upload Failed',
+              description: 'Event created but QR code was not uploaded. You can add it later via Edit.',
+              variant: 'default'
+            });
+          } else {
+            const { data: urlData } = supabase.storage
+              .from('event-banners')
+              .getPublicUrl(fileName);
+
+            qrUrl = urlData.publicUrl;
+          }
+        } catch (qrError) {
+          console.warn('QR upload error:', qrError);
+          // Continue without QR code
+        }
       }
 
       // Insert event into database
-      const deadlineDateTime = formData.deadlineDate && formData.deadlineTime 
-        ? new Date(`${formData.deadlineDate}T${formData.deadlineTime}`).toISOString() 
+      const deadlineDateTime = formData.deadlineDate && formData.deadlineTime
+        ? new Date(`${formData.deadlineDate}T${formData.deadlineTime}`).toISOString()
         : null;
-      
+
       const { error: insertError } = await supabase
         .from('events')
         .insert({
@@ -88,6 +158,8 @@ const AdminCreate = () => {
           description: formData.description,
           banner_image: bannerUrl,
           is_active: true,
+          is_payment_enabled: paymentEnabled,
+          qr_code_url: qrUrl
         });
 
       if (insertError) {
@@ -102,11 +174,14 @@ const AdminCreate = () => {
       setFormData({ name: '', startDate: '', endDate: '', deadlineDate: '', deadlineTime: '', description: '' });
       setBannerFile(null);
       setBannerPreview(null);
+      setPaymentEnabled(false);
+      setQrFile(null);
+      setQrPreview(null);
     } catch (error: any) {
-      toast({ 
-        title: 'Error', 
+      toast({
+        title: 'Error',
         description: error.message || 'Failed to create competition',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     } finally {
       setIsSubmitting(false);
@@ -129,9 +204,9 @@ const AdminCreate = () => {
         <form onSubmit={handleSubmit} className="bg-card p-6 rounded-2xl border border-border/50 space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Competition Name</label>
-            <Input 
-              placeholder="e.g., Summer Championship 2025" 
-              required 
+            <Input
+              placeholder="e.g., Summer Championship 2025"
+              required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
@@ -139,69 +214,117 @@ const AdminCreate = () => {
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Start Date</label>
-              <Input 
-                type="date" 
-                required 
+              <Input
+                type="date"
+                required
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">End Date</label>
-              <Input 
-                type="date" 
-                required 
+              <Input
+                type="date"
+                required
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
               />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Registration Deadline Date</label>
-            <Input 
-              type="date" 
-              value={formData.deadlineDate}
-              onChange={(e) => setFormData({ ...formData, deadlineDate: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Registration Deadline Time</label>
-            <Select 
-              value={formData.deadlineTime}
-              onValueChange={(value) => setFormData({ ...formData, deadlineTime: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select deadline time" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="09:00">09:00 AM</SelectItem>
-                <SelectItem value="10:00">10:00 AM</SelectItem>
-                <SelectItem value="11:00">11:00 AM</SelectItem>
-                <SelectItem value="12:00">12:00 PM</SelectItem>
-                <SelectItem value="13:00">01:00 PM</SelectItem>
-                <SelectItem value="14:00">02:00 PM</SelectItem>
-                <SelectItem value="15:00">03:00 PM</SelectItem>
-                <SelectItem value="16:00">04:00 PM</SelectItem>
-                <SelectItem value="17:00">05:00 PM</SelectItem>
-                <SelectItem value="18:00">06:00 PM</SelectItem>
-                <SelectItem value="19:00">07:00 PM</SelectItem>
-                <SelectItem value="20:00">08:00 PM</SelectItem>
-                <SelectItem value="21:00">09:00 PM</SelectItem>
-                <SelectItem value="22:00">10:00 PM</SelectItem>
-                <SelectItem value="23:59">11:59 PM</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Registration will close at this date and time</p>
-          </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Registration Deadline Date</label>
+              <Input
+                type="date"
+                value={formData.deadlineDate}
+                onChange={(e) => setFormData({ ...formData, deadlineDate: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Registration Deadline Time</label>
+              <Select
+                value={formData.deadlineTime}
+                onValueChange={(value) => setFormData({ ...formData, deadlineTime: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select deadline time" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="09:00">09:00 AM</SelectItem>
+                  <SelectItem value="10:00">10:00 AM</SelectItem>
+                  <SelectItem value="11:00">11:00 AM</SelectItem>
+                  <SelectItem value="12:00">12:00 PM</SelectItem>
+                  <SelectItem value="13:00">01:00 PM</SelectItem>
+                  <SelectItem value="14:00">02:00 PM</SelectItem>
+                  <SelectItem value="15:00">03:00 PM</SelectItem>
+                  <SelectItem value="16:00">04:00 PM</SelectItem>
+                  <SelectItem value="17:00">05:00 PM</SelectItem>
+                  <SelectItem value="18:00">06:00 PM</SelectItem>
+                  <SelectItem value="19:00">07:00 PM</SelectItem>
+                  <SelectItem value="20:00">08:00 PM</SelectItem>
+                  <SelectItem value="21:00">09:00 PM</SelectItem>
+                  <SelectItem value="22:00">10:00 PM</SelectItem>
+                  <SelectItem value="23:59">11:59 PM</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Registration will close at this date and time</p>
+            </div>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
-            <Textarea 
-              placeholder="Competition details..." 
-              rows={4} 
+            <Textarea
+              placeholder="Competition details..."
+              rows={4}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+
+          <div className="flex items-center space-x-2 border p-4 rounded-xl">
+            <Switch
+              id="payment-mode"
+              checked={paymentEnabled}
+              onCheckedChange={setPaymentEnabled}
+            />
+            <Label htmlFor="payment-mode" className="font-medium text-base cursor-pointer">
+              Enable Payment
+            </Label>
+          </div>
+
+          {paymentEnabled && (
+            <div className="space-y-2 animate-fade-in">
+              <label className="text-sm font-medium">Payment QR Code <span className="text-muted-foreground font-normal">(Optional - can add later)</span></label>
+              {qrPreview ? (
+                <div className="relative rounded-xl overflow-hidden w-48 h-48 mx-auto bg-muted">
+                  <img src={qrPreview} alt="QR preview" className="w-full h-full object-contain" />
+                  <button
+                    type="button"
+                    onClick={removeQr}
+                    className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-colors max-w-sm mx-auto"
+                  onClick={() => qrInputRef.current?.click()}
+                >
+                  <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center mb-3">
+                    <Upload className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium">Upload QR Code</p>
+                  <p className="text-xs text-muted-foreground">Image to be shown in Scan & Pay</p>
+                </div>
+              )}
+              <input
+                ref={qrInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleQrChange}
+                className="hidden"
+              />
+            </div>
+          )}
+
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Banner Image</label>
@@ -217,7 +340,7 @@ const AdminCreate = () => {
                 </button>
               </div>
             ) : (
-              <div 
+              <div
                 className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
