@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, X, Check, Trophy, Lock, Unlock } from 'lucide-react';
+import { Eye, Edit, Trash2, X, Check, Trophy, Lock, Unlock, Upload, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +29,8 @@ interface Event {
   second_runner_up_id: string | null;
   results_announced: boolean | null;
   registration_open: boolean | null;
+  is_payment_enabled: boolean | null;
+  qr_code_url: string | null;
   participantCount?: number;
   voteCount?: number;
 }
@@ -46,6 +48,8 @@ const AdminCompetitions = () => {
     runner_up_id: '',
     second_runner_up_id: '',
   });
+  const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
+  const [uploadingQr, setUploadingQr] = useState(false);
   const { toast } = useToast();
 
   const fetchEvents = async () => {
@@ -79,7 +83,7 @@ const AdminCompetitions = () => {
         })
       );
 
-      setEvents(eventsWithCounts);
+      setEvents(eventsWithCounts as unknown as Event[]);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
@@ -119,7 +123,7 @@ const AdminCompetitions = () => {
     const now = new Date();
     const start = event.start_date ? new Date(event.start_date) : null;
     const end = event.end_date ? new Date(event.end_date) : null;
-    
+
     if (start && now < start) return 'Upcoming';
     if (end && now > end) return 'Ended';
     return 'Live';
@@ -127,8 +131,38 @@ const AdminCompetitions = () => {
 
   const handleUpdate = async () => {
     if (!editEvent) return;
-    
+
     try {
+      let qrCodeUrl = editEvent.qr_code_url;
+
+      // Upload QR code if a new file is selected
+      if (qrCodeFile) {
+        setUploadingQr(true);
+        const fileExt = qrCodeFile.name.split('.').pop();
+        const fileName = `${editEvent.id}-${Date.now()}.${fileExt}`;
+        const filePath = `qr-codes/${fileName}`;
+
+        // Upload to Supabase storage
+        const { error: uploadError } = await supabase.storage
+          .from('event-assets')
+          .upload(filePath, qrCodeFile, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('event-assets')
+          .getPublicUrl(filePath);
+
+        qrCodeUrl = urlData.publicUrl;
+        setUploadingQr(false);
+      }
+
+      // If payment is disabled, clear the QR code URL
+      if (!editEvent.is_payment_enabled) {
+        qrCodeUrl = null;
+      }
+
       const { error } = await supabase
         .from('events')
         .update({
@@ -137,6 +171,8 @@ const AdminCompetitions = () => {
           start_date: editEvent.start_date,
           end_date: editEvent.end_date,
           is_active: editEvent.is_active,
+          is_payment_enabled: editEvent.is_payment_enabled,
+          qr_code_url: qrCodeUrl,
         })
         .eq('id', editEvent.id);
 
@@ -144,8 +180,10 @@ const AdminCompetitions = () => {
 
       toast({ title: 'Event Updated', description: 'Competition has been updated successfully.' });
       setEditEvent(null);
+      setQrCodeFile(null);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setUploadingQr(false);
     }
   };
 
@@ -205,8 +243,8 @@ const AdminCompetitions = () => {
 
       toast({
         title: isCurrentlyOpen ? 'Registration Closed' : 'Registration Opened',
-        description: isCurrentlyOpen 
-          ? 'Participants can no longer register for this event.' 
+        description: isCurrentlyOpen
+          ? 'Participants can no longer register for this event.'
           : 'Participants can now register for this event.',
       });
     } catch (error: any) {
@@ -225,7 +263,7 @@ const AdminCompetitions = () => {
   return (
     <div className="space-y-6 page-enter">
       <h1 className="font-display text-2xl font-bold text-foreground">Manage Competitions</h1>
-      
+
       {events.length === 0 ? (
         <div className="bg-card p-8 rounded-2xl border border-border/50 text-center">
           <p className="text-muted-foreground">No competitions created yet.</p>
@@ -250,21 +288,27 @@ const AdminCompetitions = () => {
                       <td className="p-4">
                         <div>
                           <p className="font-medium text-foreground">{event.name}</p>
-                          {event.results_announced && (
-                            <span className="text-xs text-green-600 flex items-center gap-1 mt-1">
-                              <Trophy className="w-3 h-3" /> Results announced
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2 mt-1">
+                            {event.results_announced && (
+                              <span className="text-xs text-green-600 flex items-center gap-1">
+                                <Trophy className="w-3 h-3" /> Results announced
+                              </span>
+                            )}
+                            {event.is_payment_enabled && (
+                              <span className="text-xs text-blue-600 flex items-center gap-1">
+                                <CreditCard className="w-3 h-3" /> Payment enabled
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="p-4 text-muted-foreground">{event.participantCount?.toLocaleString()}</td>
                       <td className="p-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          status === 'Live' ? 'bg-green-100 text-green-700' : 
-                          status === 'Upcoming' ? 'bg-yellow-100 text-yellow-700' : 
-                          status === 'Ended' ? 'bg-red-100 text-red-700' :
-                          'bg-muted text-muted-foreground'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${status === 'Live' ? 'bg-green-100 text-green-700' :
+                          status === 'Upcoming' ? 'bg-yellow-100 text-yellow-700' :
+                            status === 'Ended' ? 'bg-red-100 text-red-700' :
+                              'bg-muted text-muted-foreground'
+                          }`}>
                           {status}
                         </span>
                       </td>
@@ -276,9 +320,9 @@ const AdminCompetitions = () => {
                           <Button size="sm" variant="ghost" onClick={() => setEditEvent(event)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className={event.registration_open === false ? "text-red-600" : "text-green-600"}
                             onClick={() => handleToggleRegistration(event.id, event.registration_open !== false)}
                             title={event.registration_open === false ? "Open Registration" : "Close Registration"}
@@ -342,41 +386,117 @@ const AdminCompetitions = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Start Date</label>
-                  <Input 
-                    type="date" 
-                    value={editEvent.start_date?.split('T')[0] || ''} 
-                    onChange={(e) => setEditEvent({ ...editEvent, start_date: e.target.value })} 
+                  <Input
+                    type="date"
+                    value={editEvent.start_date?.split('T')[0] || ''}
+                    onChange={(e) => setEditEvent({ ...editEvent, start_date: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">End Date</label>
-                  <Input 
-                    type="date" 
-                    value={editEvent.end_date?.split('T')[0] || ''} 
-                    onChange={(e) => setEditEvent({ ...editEvent, end_date: e.target.value })} 
+                  <Input
+                    type="date"
+                    value={editEvent.end_date?.split('T')[0] || ''}
+                    onChange={(e) => setEditEvent({ ...editEvent, end_date: e.target.value })}
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
-                <Textarea 
-                  value={editEvent.description || ''} 
+                <Textarea
+                  value={editEvent.description || ''}
                   onChange={(e) => setEditEvent({ ...editEvent, description: e.target.value })}
                   rows={3}
                 />
               </div>
               <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={editEvent.is_active || false}
                   onChange={(e) => setEditEvent({ ...editEvent, is_active: e.target.checked })}
                   id="is_active"
                 />
                 <label htmlFor="is_active" className="text-sm">Active</label>
               </div>
+
+              {/* Payment Settings */}
+              <div className="border-t pt-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold text-foreground">Payment Settings</h3>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={editEvent.is_payment_enabled || false}
+                    onChange={(e) => {
+                      setEditEvent({ ...editEvent, is_payment_enabled: e.target.checked });
+                      if (!e.target.checked) {
+                        setQrCodeFile(null);
+                      }
+                    }}
+                    id="is_payment_enabled"
+                  />
+                  <label htmlFor="is_payment_enabled" className="text-sm font-medium">
+                    Enable Payment for Registration
+                  </label>
+                </div>
+
+                {editEvent.is_payment_enabled && (
+                  <div className="space-y-3 pl-7 animate-fade-in">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Upload QR Code for Payment</label>
+                      <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setQrCodeFile(file);
+                          }}
+                          className="hidden"
+                          id="qr-upload"
+                        />
+                        <label htmlFor="qr-upload" className="cursor-pointer">
+                          {qrCodeFile ? (
+                            <div className="flex items-center justify-center gap-2 text-green-600">
+                              <Check className="w-5 h-5" />
+                              <span className="text-sm">{qrCodeFile.name}</span>
+                            </div>
+                          ) : editEvent.qr_code_url ? (
+                            <div className="space-y-2">
+                              <img src={editEvent.qr_code_url} alt="Current QR" className="w-32 h-32 mx-auto object-contain" />
+                              <p className="text-xs text-center text-muted-foreground">Click to change QR code</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2 text-center">
+                              <Upload className="w-8 h-8 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">Click to upload QR code</p>
+                              <p className="text-xs text-muted-foreground">PNG, JPG (max 5MB)</p>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setEditEvent(null)}>Cancel</Button>
-                <Button variant="hero" onClick={handleUpdate}><Check className="w-4 h-4 mr-1" />Save</Button>
+                <Button variant="outline" onClick={() => { setEditEvent(null); setQrCodeFile(null); }}>Cancel</Button>
+                <Button variant="hero" onClick={handleUpdate} disabled={uploadingQr}>
+                  {uploadingQr ? (
+                    <>
+                      <div className="w-4 h-4 mr-1 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-1" />Save
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           )}
@@ -394,7 +514,7 @@ const AdminCompetitions = () => {
           {winnersDialog && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">Select winners for <strong>{winnersDialog.name}</strong></p>
-              
+
               <div className="space-y-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
