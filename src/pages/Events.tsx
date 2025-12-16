@@ -152,14 +152,14 @@ const Events = () => {
         <div className="container mx-auto px-4">
           {/* Event Type Toggle */}
           <div className="flex justify-center mb-6">
-            <div className="inline-flex p-1 bg-muted rounded-full">
+            <div className="inline-flex p-1.5 bg-card border border-border rounded-full shadow-sm">
               <button
                 onClick={() => setEventTypeFilter('all')}
                 className={cn(
-                  'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300',
+                  'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300',
                   eventTypeFilter === 'all'
                     ? 'bg-primary text-primary-foreground shadow-md'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 )}
               >
                 All Events
@@ -167,10 +167,10 @@ const Events = () => {
               <button
                 onClick={() => setEventTypeFilter('school')}
                 className={cn(
-                  'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2',
+                  'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2',
                   eventTypeFilter === 'school'
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 )}
               >
                 <School className="w-4 h-4" />
@@ -179,10 +179,10 @@ const Events = () => {
               <button
                 onClick={() => setEventTypeFilter('college')}
                 className={cn(
-                  'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2',
+                  'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2',
                   eventTypeFilter === 'college'
-                    ? 'bg-purple-500 text-white shadow-md'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 )}
               >
                 <GraduationCap className="w-4 h-4" />
