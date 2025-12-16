@@ -162,7 +162,6 @@ const AdminCreate = () => {
           is_active: true,
           is_payment_enabled: paymentEnabled,
           qr_code_url: qrUrl,
-          participation_type: participationType,
           event_type: participationType
         });
 
