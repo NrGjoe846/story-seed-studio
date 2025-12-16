@@ -83,6 +83,121 @@ export type Database = {
         }
         Relationships: []
       }
+      clg_registrations: {
+        Row: {
+          age: number
+          branch: string | null
+          category: string
+          city: string
+          college_name: string | null
+          created_at: string
+          degree: string | null
+          email: string
+          event_id: string | null
+          first_name: string
+          id: string
+          last_name: string
+          overall_views: number
+          overall_votes: number
+          pdf_url: string | null
+          phone: string
+          story_description: string
+          story_title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          age: number
+          branch?: string | null
+          category: string
+          city: string
+          college_name?: string | null
+          created_at?: string
+          degree?: string | null
+          email: string
+          event_id?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          overall_views?: number
+          overall_votes?: number
+          pdf_url?: string | null
+          phone: string
+          story_description: string
+          story_title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          age?: number
+          branch?: string | null
+          category?: string
+          city?: string
+          college_name?: string | null
+          created_at?: string
+          degree?: string | null
+          email?: string
+          event_id?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          overall_views?: number
+          overall_votes?: number
+          pdf_url?: string | null
+          phone?: string
+          story_description?: string
+          story_title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clg_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clg_votes: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          registration_id: string
+          score: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          registration_id: string
+          score: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          registration_id?: string
+          score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clg_votes_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "clg_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           content: string

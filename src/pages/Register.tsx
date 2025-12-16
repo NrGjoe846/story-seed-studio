@@ -359,14 +359,19 @@ const Register = () => {
 
   const submitRegistration = async () => {
     if (!selectedEventId || !authenticatedUserId) {
-      toast({ title: 'Error', description: 'Please verify your phone number first.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Please verify your email first.', variant: 'destructive' });
       return false;
     }
     setIsSubmitting(true);
     try {
       const phoneDigits = personalInfo.phone.replace(/\D/g, '');
+      const selectedEvent = events.find(e => e.id === selectedEventId);
+      const isCollegeEvent = role === 'college';
+
+      // Check for existing registration
+      const tableName = isCollegeEvent ? 'clg_registrations' : 'registrations';
       const { data: existingByPhone } = await supabase
-        .from('registrations')
+        .from(tableName)
         .select('id')
         .eq('event_id', selectedEventId)
         .ilike('phone', `%${phoneDigits.slice(-10)}`);
@@ -378,31 +383,77 @@ const Register = () => {
       }
 
       const sessionId = getSessionId();
-      // Note: We are sending extra fields to the webhook. 
-      // Ensure the 'registrations' table has these columns if you want to save them to Supabase directly.
-      const { error: dbError } = await supabase.from('registrations').insert({
-        user_id: authenticatedUserId,
-        event_id: selectedEventId,
-        first_name: personalInfo.firstName,
-        last_name: personalInfo.lastName,
-        email: personalInfo.email.toLowerCase(),
-        phone: phoneDigits,
-        age: parseInt(personalInfo.age),
-        city: personalInfo.city,
-        story_title: storyDetails.title,
-        category: storyDetails.category,
-        class_level: storyDetails.classLevel,
-        story_description: storyDetails.description,
-      });
 
-      if (dbError) {
-        console.error('Database error:', dbError);
-        toast({ title: 'Registration Failed', description: 'Could not save registration. Please try again.', variant: 'destructive' });
-        return false;
+      if (isCollegeEvent) {
+        // Upload PDF to storage for college registrations
+        let pdfUrl = null;
+        if (storyDetails.storyPdf) {
+          const fileName = `${authenticatedUserId}-${Date.now()}-${storyDetails.storyPdf.name}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('college-story-pdfs')
+            .upload(fileName, storyDetails.storyPdf);
+
+          if (uploadError) {
+            console.error('PDF upload error:', uploadError);
+            toast({ title: 'Upload Failed', description: 'Could not upload PDF. Please try again.', variant: 'destructive' });
+            return false;
+          }
+
+          const { data: publicUrlData } = supabase.storage
+            .from('college-story-pdfs')
+            .getPublicUrl(fileName);
+          pdfUrl = publicUrlData.publicUrl;
+        }
+
+        // Insert into clg_registrations table
+        const { error: dbError } = await supabase.from('clg_registrations').insert({
+          user_id: authenticatedUserId,
+          event_id: selectedEventId,
+          first_name: personalInfo.firstName,
+          last_name: personalInfo.lastName,
+          email: personalInfo.email.toLowerCase(),
+          phone: phoneDigits,
+          age: parseInt(personalInfo.age),
+          city: personalInfo.city,
+          college_name: personalInfo.collegeName || null,
+          degree: personalInfo.degree || null,
+          branch: personalInfo.branch || null,
+          story_title: storyDetails.title,
+          category: storyDetails.category,
+          story_description: storyDetails.description,
+          pdf_url: pdfUrl,
+        });
+
+        if (dbError) {
+          console.error('Database error:', dbError);
+          toast({ title: 'Registration Failed', description: 'Could not save registration. Please try again.', variant: 'destructive' });
+          return false;
+        }
+      } else {
+        // Insert into registrations table for school events
+        const { error: dbError } = await supabase.from('registrations').insert({
+          user_id: authenticatedUserId,
+          event_id: selectedEventId,
+          first_name: personalInfo.firstName,
+          last_name: personalInfo.lastName,
+          email: personalInfo.email.toLowerCase(),
+          phone: phoneDigits,
+          age: parseInt(personalInfo.age),
+          city: personalInfo.city,
+          story_title: storyDetails.title,
+          category: storyDetails.category,
+          class_level: storyDetails.classLevel,
+          story_description: storyDetails.description,
+        });
+
+        if (dbError) {
+          console.error('Database error:', dbError);
+          toast({ title: 'Registration Failed', description: 'Could not save registration. Please try again.', variant: 'destructive' });
+          return false;
+        }
       }
 
       saveUserSession(personalInfo.email, personalInfo.firstName, authenticatedUserId);
-      const selectedEvent = events.find(e => e.id === selectedEventId);
 
       // Webhook
       const formData = new FormData();
@@ -423,8 +474,7 @@ const Register = () => {
         if (personalInfo.degree) formData.append('degree', personalInfo.degree);
         if (personalInfo.branch) formData.append('branch', personalInfo.branch);
       }
-      formData.append('year_of_studying', storyDetails.classLevel); // Mapping classLevel to generic field
-
+      formData.append('year_of_studying', storyDetails.classLevel);
 
       formData.append('story_title', storyDetails.title);
       formData.append('category', storyDetails.category);
@@ -433,7 +483,6 @@ const Register = () => {
 
       if (storyDetails.videoFile) formData.append('video', storyDetails.videoFile);
       if (storyDetails.storyPdf) formData.append('story_pdf', storyDetails.storyPdf);
-      if (storyDetails.coverPage) formData.append('cover_page', storyDetails.coverPage);
 
       try {
         await fetch(WEBHOOK_URL, { method: 'POST', body: formData, mode: 'no-cors' });
