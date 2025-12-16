@@ -66,18 +66,12 @@ const Leaderboard = () => {
       // Fetch registrations with overall_votes for community leaderboard
       const { data: registrationsData, error } = await supabase
         .from('registrations')
-        .select('id, story_title, first_name, last_name, age, category, class_level, overall_views, overall_votes, user_id, event_id, role')
+        .select('id, story_title, first_name, last_name, age, category, class_level, overall_views, overall_votes, user_id, event_id')
         .eq('event_id', selectedEvent);
 
       if (error) throw error;
 
       let registrations = registrationsData as any[];
-      const userRole = localStorage.getItem('story_seed_user_role');
-
-      // Filter by role if user has a specific role set
-      if (userRole && (userRole === 'school' || userRole === 'college')) {
-        registrations = registrations.filter(r => r.role === userRole);
-      }
 
       // Get judge votes from votes table (these have scores from judges)
       const { data: votes } = await supabase.from('votes').select('registration_id, user_id, score');
