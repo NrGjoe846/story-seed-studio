@@ -25,7 +25,7 @@ interface Event {
   description: string | null;
   is_payment_enabled: boolean;
   qr_code_url: string | null;
-  participation_type: 'school' | 'college' | 'both' | null;
+  event_type: 'school' | 'college' | 'both' | null;
 }
 
 
@@ -150,9 +150,9 @@ const Register = () => {
   // Derived state
   const filteredEvents = events.filter(e => {
     if (!role) return true;
-    if (!e.participation_type) return true; // Forward compatibility if null
-    if (e.participation_type === 'both') return true;
-    return e.participation_type === role;
+    if (!e.event_type) return true; // Forward compatibility if null
+    if (e.event_type === 'both') return true;
+    return e.event_type === role;
   });
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
@@ -167,7 +167,7 @@ const Register = () => {
     const fetchData = async () => {
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select('id, name, description, is_payment_enabled, qr_code_url, participation_type')
+        .select('id, name, description, is_payment_enabled, qr_code_url, event_type')
         .eq('is_active', true);
 
       if (!eventsError && eventsData) {
@@ -190,7 +190,7 @@ const Register = () => {
     if (selectedEventId && events.length > 0 && role) {
       const event = events.find(e => e.id === selectedEventId);
       if (event) {
-        const isCompatible = !event.participation_type || event.participation_type === 'both' || event.participation_type === role;
+        const isCompatible = !event.event_type || event.event_type === 'both' || event.event_type === role;
         if (!isCompatible) {
           setSelectedEventId('');
           setIsEventLocked(false); // Unlock if we force clear it, so they can pick something else
@@ -353,10 +353,6 @@ const Register = () => {
         toast({ title: 'PDF Required', description: 'Please upload your story PDF.', variant: 'destructive' });
         return false;
       }
-      if (!coverPage) {
-        toast({ title: 'Cover Page Required', description: 'Please upload a cover page.', variant: 'destructive' });
-        return false;
-      }
     }
     return true;
   };
@@ -397,8 +393,6 @@ const Register = () => {
         category: storyDetails.category,
         class_level: storyDetails.classLevel,
         story_description: storyDetails.description,
-        role: role,
-        // We might want to save transaction details if payment was enabled
       });
 
       if (dbError) {
@@ -461,7 +455,17 @@ const Register = () => {
   const handleNext = async () => {
     if (currentStep === 1) {
       if (!validateStep1()) return;
-      setCurrentStep(2);
+      // Auto-skip role selection for single-type events
+      const event = events.find(e => e.id === selectedEventId);
+      if (event?.event_type === 'school') {
+        setRole('school');
+        setCurrentStep(3);
+      } else if (event?.event_type === 'college') {
+        setRole('college');
+        setCurrentStep(3);
+      } else {
+        setCurrentStep(2);
+      }
       return;
     }
 
@@ -603,6 +607,21 @@ const Register = () => {
                         <p className="text-blue-600 text-sm mb-4">We've sent a magic link to <strong>{verificationEmail}</strong></p>
                         <p className="text-blue-600 text-xs">Click the link in the email to continue your registration.</p>
                       </div>
+                      <Button 
+                        variant="hero" 
+                        className="w-full" 
+                        onClick={() => {
+                          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                          if (isMobile) {
+                            window.location.href = 'mailto:';
+                          } else {
+                            window.open('https://mail.google.com', '_blank');
+                          }
+                        }}
+                      >
+                        <Mail className="w-4 h-4 mr-2" />
+                        Open Email Inbox
+                      </Button>
                       <Button variant="ghost" className="w-full" onClick={() => setEmailStep('email')}>Change Email Address</Button>
                       <Button variant="outline" className="w-full" onClick={handleSendMagicLink} disabled={sendingEmail}>{sendingEmail ? 'Sending...' : 'Resend Magic Link'}</Button>
                     </div>
@@ -683,7 +702,13 @@ const Register = () => {
                   <div className="space-y-2"><Label>First Name</Label><Input placeholder="Enter first name" value={personalInfo.firstName} onChange={(e) => setPersonalInfo((prev) => ({ ...prev, firstName: e.target.value }))} required /></div>
                   <div className="space-y-2"><Label>Last Name</Label><Input placeholder="Enter last name" value={personalInfo.lastName} onChange={(e) => setPersonalInfo((prev) => ({ ...prev, lastName: e.target.value }))} required /></div>
                 </div>
-                <div className="space-y-2"><Label>Email Address</Label><Input type="email" placeholder="your@email.com" value={personalInfo.email} onChange={(e) => setPersonalInfo((prev) => ({ ...prev, email: e.target.value }))} required /></div>
+                <div className="space-y-2">
+                  <Label>Email Address (Verified)</Label>
+                  <div className="relative">
+                    <Input type="email" value={personalInfo.email} className="bg-muted pr-10" readOnly disabled />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2"><ShieldCheck className="w-5 h-5 text-green-500" /></div>
+                  </div>
+                </div>
 
                 {/* School or College Name */}
                 {role === 'school' && (
@@ -700,11 +725,10 @@ const Register = () => {
                 )}
 
                 <div className="space-y-2">
-                  <Label>Phone Number (Verified)</Label>
+                  <Label>Phone Number</Label>
                   <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10"><span className="text-sm font-medium text-muted-foreground">IN+91</span></div>
-                    <Input type="tel" value={personalInfo.phone} className="pl-16 bg-muted" readOnly disabled />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2"><ShieldCheck className="w-5 h-5 text-green-500" /></div>
+                    <Input type="tel" placeholder="Enter phone number" value={personalInfo.phone} onChange={(e) => setPersonalInfo((prev) => ({ ...prev, phone: e.target.value }))} className="pl-16" />
                   </div>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -791,47 +815,25 @@ const Register = () => {
                       </div>
                     </div>
                   ) : (
-                    // College: PDF + Cover Page
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Upload Story (PDF)</Label>
-                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors bg-muted/20 h-[150px] flex flex-col justify-center">
-                          <input type="file" accept=".pdf" onChange={(e) => { const file = e.target.files?.[0]; if (file) setStoryDetails((prev) => ({ ...prev, storyPdf: file })); }} className="hidden" id="pdf-upload" />
-                          <label htmlFor="pdf-upload" className="cursor-pointer">
-                            {storyDetails.storyPdf ? (
-                              <div className="flex flex-col items-center justify-center gap-2 text-red-600">
-                                <FileType className="w-8 h-8" />
-                                <span className="text-sm line-clamp-1">{storyDetails.storyPdf.name}</span>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                <div className="w-10 h-10 mx-auto bg-muted rounded-full flex items-center justify-center"><FileType className="w-5 h-5 text-muted-foreground" /></div>
-                                <p className="text-sm text-muted-foreground">Upload PDF</p>
-                              </div>
-                            )}
-                          </label>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Cover Page (Image)</Label>
-                        <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors bg-muted/20 h-[150px] flex flex-col justify-center relative overflow-hidden group">
-                          <input type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) setStoryDetails((prev) => ({ ...prev, coverPage: file })); }} className="hidden" id="cover-upload" />
-                          <label htmlFor="cover-upload" className="cursor-pointer w-full h-full flex items-center justify-center">
-                            {storyDetails.coverPage ? (
-                              <>
-                                <img src={URL.createObjectURL(storyDetails.coverPage)} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <span className="text-white text-sm font-medium">Change Cover</span>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="space-y-2">
-                                <div className="w-10 h-10 mx-auto bg-muted rounded-full flex items-center justify-center"><FileImage className="w-5 h-5 text-muted-foreground" /></div>
-                                <p className="text-sm text-muted-foreground">Upload Image</p>
-                              </div>
-                            )}
-                          </label>
-                        </div>
+                    // College: PDF only
+                    <div className="space-y-2">
+                      <Label>Upload Story (PDF)</Label>
+                      <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors bg-muted/20">
+                        <input type="file" accept=".pdf" onChange={(e) => { const file = e.target.files?.[0]; if (file) setStoryDetails((prev) => ({ ...prev, storyPdf: file })); }} className="hidden" id="pdf-upload" />
+                        <label htmlFor="pdf-upload" className="cursor-pointer">
+                          {storyDetails.storyPdf ? (
+                            <div className="flex flex-col items-center justify-center gap-2 text-red-600">
+                              <FileType className="w-8 h-8" />
+                              <span className="text-sm">{storyDetails.storyPdf.name}</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center"><FileType className="w-6 h-6 text-muted-foreground" /></div>
+                              <p className="text-muted-foreground">Click to upload your story PDF</p>
+                              <p className="text-xs text-muted-foreground">PDF format only (max 50MB)</p>
+                            </div>
+                          )}
+                        </label>
                       </div>
                     </div>
                   )}
