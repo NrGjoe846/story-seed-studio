@@ -63,76 +63,121 @@ const Leaderboard = () => {
       setLoading(true);
       if (!selectedEvent) return;
 
-      // Fetch registrations with overall_votes for community leaderboard
-      const { data: registrationsData, error } = await supabase
-        .from('registrations')
-        .select('id, story_title, first_name, last_name, age, category, class_level, overall_views, overall_votes, user_id, event_id')
-        .eq('event_id', selectedEvent);
+      const currentEvent = events.find(e => e.id === selectedEvent);
+      const isCollegeEvent = currentEvent?.event_type === 'college' || currentEvent?.event_type === 'both';
 
-      if (error) throw error;
+      if (isCollegeEvent) {
+        // Fetch from clg_registrations for college events
+        const { data: registrationsData, error } = await supabase
+          .from('clg_registrations')
+          .select('id, story_title, first_name, last_name, age, category, overall_views, overall_votes, user_id, event_id, college_name')
+          .eq('event_id', selectedEvent);
 
-      let registrations = registrationsData as any[];
+        if (error) throw error;
 
-      // Get judge votes from votes table (these have scores from judges)
-      const { data: votes } = await supabase.from('votes').select('registration_id, user_id, score');
-
-      // Process judge votes from votes table
-      const scoreData: Record<string, { total: number; count: number }> = {};
-      (votes || []).forEach(vote => {
-        if (!scoreData[vote.registration_id]) {
-          scoreData[vote.registration_id] = { total: 0, count: 0 };
-        }
-        scoreData[vote.registration_id].total += vote.score;
-        scoreData[vote.registration_id].count += 1;
-      });
-
-      // Judge leaderboard uses average scores from votes table
-      const judgeEntriesWithScores = (registrations || []).map(reg => {
-        const data = scoreData[reg.id];
-        return {
-          ...reg,
-          average_score: data ? parseFloat((data.total / data.count).toFixed(1)) : 0,
-          total_reviews: data ? data.count : 0
-        };
-      });
-
-      // Get judge top 6 (2 per class level) to exclude from community voting pool
-      const sortedByJudgeScore = [...judgeEntriesWithScores]
-        .filter(e => e.total_reviews > 0)
-        .sort((a, b) => {
-          if (b.average_score !== a.average_score) return b.average_score - a.average_score;
-          return b.total_reviews - a.total_reviews;
-        });
-
-      const classLevels = ['Tiny Tales', 'Young Dreamers', 'Story Champions'];
-      const judgeTop6Ids: string[] = [];
-
-      for (const level of classLevels) {
-        const entriesForLevel = sortedByJudgeScore.filter(e => e.class_level === level);
-        const selected = entriesForLevel.slice(0, 2);
-        judgeTop6Ids.push(...selected.map(e => e.id));
-      }
-
-      // Fill remaining if needed
-      if (judgeTop6Ids.length < 6) {
-        const remaining = sortedByJudgeScore.filter(e => !judgeTop6Ids.includes(e.id));
-        judgeTop6Ids.push(...remaining.slice(0, 6 - judgeTop6Ids.length).map(e => e.id));
-      }
-
-      // Get top 45 from judge rankings (excluding judge top 6) for community voting eligibility
-      const remainingAfterJudgeTop6 = sortedByJudgeScore.filter(e => !judgeTop6Ids.includes(e.id));
-      const eligibleForCommunityVotingIds = remainingAfterJudgeTop6.slice(0, 45).map(e => e.id);
-
-      // Community leaderboard: only from eligible pool, sorted by overall_votes
-      const communityEntriesWithVotes = (registrations || [])
-        .filter(reg => eligibleForCommunityVotingIds.includes(reg.id))
-        .map(reg => ({
-          ...reg,
-          vote_count: reg.overall_votes || 0
+        const registrations = (registrationsData || []).map(r => ({
+          ...r,
+          class_level: null // College doesn't have class levels
         }));
 
-      setCommunityEntries(communityEntriesWithVotes);
-      setJudgeEntries(judgeEntriesWithScores);
+        // Get judge votes from clg_votes table
+        const { data: votes } = await supabase.from('clg_votes').select('registration_id, user_id, score');
+
+        // Process judge votes
+        const scoreData: Record<string, { total: number; count: number }> = {};
+        (votes || []).forEach(vote => {
+          if (!scoreData[vote.registration_id]) {
+            scoreData[vote.registration_id] = { total: 0, count: 0 };
+          }
+          scoreData[vote.registration_id].total += vote.score;
+          scoreData[vote.registration_id].count += 1;
+        });
+
+        // Judge leaderboard - simple top ranking for college (no class level distribution)
+        const judgeEntriesWithScores = registrations.map(reg => {
+          const data = scoreData[reg.id];
+          return {
+            ...reg,
+            role: null,
+            average_score: data ? parseFloat((data.total / data.count).toFixed(1)) : 0,
+            total_reviews: data ? data.count : 0
+          };
+        });
+
+        setCommunityEntries([]); // No community voting for college events
+        setJudgeEntries(judgeEntriesWithScores as JudgeEntry[]);
+      } else {
+        // School events - use existing registrations table
+        const { data: registrationsData, error } = await supabase
+          .from('registrations')
+          .select('id, story_title, first_name, last_name, age, category, class_level, overall_views, overall_votes, user_id, event_id')
+          .eq('event_id', selectedEvent);
+
+        if (error) throw error;
+
+        const registrations = registrationsData as any[];
+
+        // Get judge votes from votes table
+        const { data: votes } = await supabase.from('votes').select('registration_id, user_id, score');
+
+        // Process judge votes
+        const scoreData: Record<string, { total: number; count: number }> = {};
+        (votes || []).forEach(vote => {
+          if (!scoreData[vote.registration_id]) {
+            scoreData[vote.registration_id] = { total: 0, count: 0 };
+          }
+          scoreData[vote.registration_id].total += vote.score;
+          scoreData[vote.registration_id].count += 1;
+        });
+
+        // Judge leaderboard uses average scores from votes table
+        const judgeEntriesWithScores = (registrations || []).map(reg => {
+          const data = scoreData[reg.id];
+          return {
+            ...reg,
+            average_score: data ? parseFloat((data.total / data.count).toFixed(1)) : 0,
+            total_reviews: data ? data.count : 0
+          };
+        });
+
+        // Get judge top 6 (2 per class level) to exclude from community voting pool
+        const sortedByJudgeScore = [...judgeEntriesWithScores]
+          .filter(e => e.total_reviews > 0)
+          .sort((a, b) => {
+            if (b.average_score !== a.average_score) return b.average_score - a.average_score;
+            return b.total_reviews - a.total_reviews;
+          });
+
+        const classLevels = ['Tiny Tales', 'Young Dreamers', 'Story Champions'];
+        const judgeTop6Ids: string[] = [];
+
+        for (const level of classLevels) {
+          const entriesForLevel = sortedByJudgeScore.filter(e => e.class_level === level);
+          const selected = entriesForLevel.slice(0, 2);
+          judgeTop6Ids.push(...selected.map(e => e.id));
+        }
+
+        // Fill remaining if needed
+        if (judgeTop6Ids.length < 6) {
+          const remaining = sortedByJudgeScore.filter(e => !judgeTop6Ids.includes(e.id));
+          judgeTop6Ids.push(...remaining.slice(0, 6 - judgeTop6Ids.length).map(e => e.id));
+        }
+
+        // Get top 45 from judge rankings (excluding judge top 6) for community voting eligibility
+        const remainingAfterJudgeTop6 = sortedByJudgeScore.filter(e => !judgeTop6Ids.includes(e.id));
+        const eligibleForCommunityVotingIds = remainingAfterJudgeTop6.slice(0, 45).map(e => e.id);
+
+        // Community leaderboard: only from eligible pool, sorted by overall_votes
+        const communityEntriesWithVotes = (registrations || [])
+          .filter(reg => eligibleForCommunityVotingIds.includes(reg.id))
+          .map(reg => ({
+            ...reg,
+            vote_count: reg.overall_votes || 0
+          }));
+
+        setCommunityEntries(communityEntriesWithVotes);
+        setJudgeEntries(judgeEntriesWithScores);
+      }
     } catch (error) {
       console.error('Error fetching leaderboards:', error);
     } finally {
@@ -158,12 +203,29 @@ const Leaderboard = () => {
     }, () => {
       fetchLeaderboards();
     }).subscribe();
+    // College tables listeners
+    const clgVotesChannel = supabase.channel('leaderboard-clg-votes-public').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'clg_votes'
+    }, () => {
+      fetchLeaderboards();
+    }).subscribe();
+    const clgRegistrationsChannel = supabase.channel('leaderboard-clg-registrations-public').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'clg_registrations'
+    }, () => {
+      fetchLeaderboards();
+    }).subscribe();
 
     return () => {
       supabase.removeChannel(votesChannel);
       supabase.removeChannel(registrationsChannel);
+      supabase.removeChannel(clgVotesChannel);
+      supabase.removeChannel(clgRegistrationsChannel);
     };
-  }, [selectedEvent]);
+  }, [selectedEvent, events]);
   const getBalancedTop6 = <T extends {
     class_level: string | null;
   },>(sortedEntries: T[], getScore: (e: T) => number): T[] => {
@@ -184,15 +246,20 @@ const Leaderboard = () => {
   const sortedCommunityEntries = [...communityEntries].sort((a, b) => b.vote_count - a.vote_count);
   const communityTop6 = getBalancedTop6(sortedCommunityEntries, e => e.vote_count);
   const communityTopThree = communityTop6.slice(0, 3);
-  const communityRestTop6 = communityTop6.slice(3); // Only show ranks 4-6 from the balanced top 6
+  const communityRestTop6 = communityTop6.slice(3);
 
   const sortedJudgeEntries = [...judgeEntries].filter(e => e.total_reviews > 0).sort((a, b) => {
     if (b.average_score !== a.average_score) return b.average_score - a.average_score;
     return b.total_reviews - a.total_reviews;
   });
-  const judgeTop6 = getBalancedTop6(sortedJudgeEntries, e => e.average_score);
+  
+  // For college events, use simple top ranking; for school events, use balanced class-level distribution
+  const isCollegeEvent = selectedEventType === 'college' || selectedEventType === 'both';
+  const judgeTop6 = isCollegeEvent 
+    ? sortedJudgeEntries.slice(0, 6) 
+    : getBalancedTop6(sortedJudgeEntries, e => e.average_score);
   const judgeTopThree = judgeTop6.slice(0, 3);
-  const judgeRestTop6 = judgeTop6.slice(3); // Only show ranks 4-6 from the balanced top 6
+  const judgeRestTop6 = judgeTop6.slice(3);
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };

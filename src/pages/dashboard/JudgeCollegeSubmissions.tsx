@@ -21,7 +21,6 @@ type CollegeParticipant = {
   branch: string;
   photo: string;
   pdfUrl: string;
-  coverPageUrl: string;
   registrationId: string;
   hasVoted: boolean;
 };
@@ -50,9 +49,9 @@ const JudgeCollegeSubmissions = () => {
     if (!user?.id) return;
 
     try {
-      // Get all votes by this judge
+      // Get all votes by this judge from clg_votes table
       const { data: votes } = await supabase
-        .from('votes')
+        .from('clg_votes')
         .select('registration_id')
         .eq('user_id', user.id);
 
@@ -63,15 +62,16 @@ const JudgeCollegeSubmissions = () => {
         .from('events')
         .select('id, name, event_type')
         .eq('is_active', true)
-        .eq('event_type', 'college');
+        .in('event_type', ['college', 'both']);
 
       if (eventsData) {
         const eventsWithParticipants: CollegeEvent[] = [];
 
         for (const event of eventsData) {
+          // Fetch from clg_registrations table
           const { data: registrations } = await supabase
-            .from('registrations')
-            .select('id, first_name, last_name, story_title, story_description, pdf_url, cover_page_url')
+            .from('clg_registrations')
+            .select('id, first_name, last_name, story_title, story_description, pdf_url, college_name, degree, branch')
             .eq('event_id', event.id);
 
           if (registrations && registrations.length > 0) {
@@ -80,12 +80,11 @@ const JudgeCollegeSubmissions = () => {
               name: `${p.first_name} ${p.last_name}`,
               storyTitle: p.story_title,
               storyDescription: p.story_description || '',
-              collegeName: '',
-              degree: '',
-              branch: '',
+              collegeName: p.college_name || '',
+              degree: p.degree || '',
+              branch: p.branch || '',
               photo: `https://api.dicebear.com/8.x/initials/svg?seed=${p.first_name}${p.last_name}`,
               pdfUrl: p.pdf_url || '',
-              coverPageUrl: p.cover_page_url || '',
               registrationId: p.id,
               hasVoted: votedRegistrationIds.includes(p.id)
             }));
@@ -114,10 +113,10 @@ const JudgeCollegeSubmissions = () => {
 
     const channel = supabase
       .channel('judge-college-submissions-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'votes' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clg_votes' }, () => {
         fetchCollegeEvents();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clg_registrations' }, () => {
         fetchCollegeEvents();
       })
       .subscribe();
@@ -157,7 +156,8 @@ const JudgeCollegeSubmissions = () => {
     const score = Math.round((voteScore[0] / 100) * 10);
 
     try {
-      const { error } = await supabase.from('votes').insert({
+      // Insert into clg_votes table
+      const { error } = await supabase.from('clg_votes').insert({
         user_id: user.id,
         registration_id: selectedParticipant.registrationId,
         score,
@@ -272,6 +272,9 @@ const JudgeCollegeSubmissions = () => {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{participant.storyTitle}</p>
+                  {participant.collegeName && (
+                    <p className="text-xs text-muted-foreground">{participant.collegeName}</p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -308,17 +311,6 @@ const JudgeCollegeSubmissions = () => {
 
           {selectedParticipant && (
             <div className="space-y-6 mt-4">
-              {/* Cover Page Preview */}
-              {selectedParticipant.coverPageUrl && (
-                <div className="relative w-full bg-muted rounded-xl overflow-hidden aspect-[3/4] max-h-[300px]">
-                  <img
-                    src={selectedParticipant.coverPageUrl}
-                    alt="Cover Page"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              )}
-
               {/* Download PDF Button */}
               <div className="flex justify-center">
                 <Button
@@ -341,6 +333,9 @@ const JudgeCollegeSubmissions = () => {
                 <div className="flex-1">
                   <p className="font-medium text-foreground text-lg">{selectedParticipant.name}</p>
                   <p className="text-sm text-muted-foreground">{selectedParticipant.storyTitle}</p>
+                  {selectedParticipant.collegeName && (
+                    <p className="text-sm text-muted-foreground">{selectedParticipant.collegeName} - {selectedParticipant.degree}</p>
+                  )}
                 </div>
               </div>
 
