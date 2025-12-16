@@ -653,21 +653,41 @@ const Register = () => {
               <div className="space-y-8 animate-fade-in">
                 <div className="text-center">
                   <h2 className="font-display text-2xl font-semibold text-foreground">Get Started</h2>
-                  <p className="text-muted-foreground mt-2">Verify your email to begin registration</p>
+                  <p className="text-muted-foreground mt-2">Select your event and verify your email</p>
                 </div>
 
                 {/* Email Verification Section */}
                 <div className="space-y-6">
                   {emailStep === 'email' && (
                     <div className="space-y-4">
+                      {/* Event Selection - Must be selected before sending magic link */}
+                      {!isEventLocked && (
+                        <div className="space-y-2">
+                          <Label>Select Event <span className="text-destructive">*</span></Label>
+                          <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                            <SelectTrigger><SelectValue placeholder="Choose an event to participate in" /></SelectTrigger>
+                            <SelectContent>
+                              {events.filter(e => e.event_type === 'school' || e.event_type === 'college' || e.event_type === 'both').map((event) => (<SelectItem key={event.id} value={event.id}>{event.name}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {isEventLocked && selectedEventId && (
+                        <div className="space-y-2">
+                          <Label>Selected Event</Label>
+                          <div className="p-3 bg-muted rounded-md text-sm font-medium">
+                            {events.find(e => e.id === selectedEventId)?.name || 'Loading...'}
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-2">
-                        <Label>Email Address</Label>
+                        <Label>Email Address <span className="text-destructive">*</span></Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                           <Input type="email" placeholder="Enter your email address" value={verificationEmail} onChange={(e) => setVerificationEmail(e.target.value)} className="pl-10" required />
                         </div>
                       </div>
-                      <Button onClick={handleSendMagicLink} disabled={sendingEmail || !verificationEmail.includes('@')} className="w-full" variant="hero" size="lg">{sendingEmail ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</> : <>Send Magic Link<ArrowRight className="w-4 h-4 ml-2" /></>}</Button>
+                      <Button onClick={handleSendMagicLink} disabled={sendingEmail || !verificationEmail.includes('@') || !selectedEventId} className="w-full" variant="hero" size="lg">{sendingEmail ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</> : <>Send Magic Link<ArrowRight className="w-4 h-4 ml-2" /></>}</Button>
                     </div>
                   )}
                   {emailStep === 'sent' && (
@@ -806,14 +826,13 @@ const Register = () => {
                   <div className="space-y-2"><Label>Age</Label><Input type="number" placeholder="Your age" value={personalInfo.age} onChange={(e) => setPersonalInfo((prev) => ({ ...prev, age: e.target.value }))} required min={1} max={100} /></div>
                   <div className="space-y-2"><Label>City</Label><Input placeholder="Your city" value={personalInfo.city} onChange={(e) => setPersonalInfo((prev) => ({ ...prev, city: e.target.value }))} required /></div>
                 </div>
+                {/* Show selected event (read-only since selected in Step 1) */}
                 <div className="space-y-2">
-                  <Label>Select Event</Label>
-                  <Select value={selectedEventId} onValueChange={setSelectedEventId} disabled={isEventLocked}>
-                    <SelectTrigger><SelectValue placeholder="Choose an event to participate in" /></SelectTrigger>
-                    <SelectContent>
-                      {filteredEvents.map((event) => (<SelectItem key={event.id} value={event.id}>{event.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Selected Event</Label>
+                  <div className="p-3 bg-muted rounded-md text-sm font-medium flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    {events.find(e => e.id === selectedEventId)?.name || 'No event selected'}
+                  </div>
                 </div>
                 <div className="flex justify-between pt-4">
                   <Button variant="ghost" onClick={handlePrev} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4 mr-2" /> Previous</Button>
