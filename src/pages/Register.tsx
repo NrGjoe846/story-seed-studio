@@ -90,6 +90,11 @@ const Register = () => {
     senderName: '',
   });
 
+  // YouTube Upload states
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'initializing' | 'uploading' | 'processing' | 'complete' | 'error'>('idle');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -371,6 +376,101 @@ const Register = () => {
     return true;
   };
 
+  // Upload video directly to YouTube
+  const uploadVideoToYouTube = async (videoFile: File, registrationId: string): Promise<string | null> => {
+    try {
+      setUploadStatus('initializing');
+      setUploadProgress(0);
+      setUploadError(null);
+
+      const videoTitle = `${storyDetails.title} - ${personalInfo.firstName} ${personalInfo.lastName}`;
+      const videoDescription = `Story submission by ${personalInfo.firstName} ${personalInfo.lastName}\n\nCategory: ${storyDetails.category}\nClass Level: ${storyDetails.classLevel}\n\n${storyDetails.description}`;
+
+      // Step 1: Initialize upload session
+      console.log('Initializing YouTube upload session...');
+      const initResponse = await supabase.functions.invoke('youtube-upload-init', {
+        body: {
+          title: videoTitle,
+          description: videoDescription,
+          registrationId,
+          fileName: videoFile.name,
+          fileSize: videoFile.size,
+          mimeType: videoFile.type,
+        },
+      });
+
+      if (initResponse.error || !initResponse.data?.uploadUri) {
+        console.error('Failed to initialize upload:', initResponse.error || initResponse.data);
+        throw new Error(initResponse.data?.error || 'Failed to initialize YouTube upload');
+      }
+
+      const uploadUri = initResponse.data.uploadUri;
+      console.log('Upload URI obtained:', uploadUri);
+
+      // Step 2: Upload video directly to YouTube
+      setUploadStatus('uploading');
+
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(progress);
+            console.log(`Upload progress: ${progress}%`);
+          }
+        };
+
+        xhr.onload = async () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              const videoId = response.id;
+              console.log('Video uploaded successfully, ID:', videoId);
+
+              // Step 3: Save YouTube link to database
+              setUploadStatus('processing');
+              const completeResponse = await supabase.functions.invoke('youtube-upload-complete', {
+                body: {
+                  videoId,
+                  registrationId,
+                },
+              });
+
+              if (completeResponse.error) {
+                console.error('Failed to save YouTube link:', completeResponse.error);
+                // Don't fail the upload, just log it - the video is already uploaded
+              }
+
+              setUploadStatus('complete');
+              resolve(`https://youtu.be/${videoId}`);
+            } catch (parseError) {
+              console.error('Error parsing YouTube response:', parseError);
+              reject(new Error('Failed to process YouTube response'));
+            }
+          } else {
+            console.error('YouTube upload failed:', xhr.status, xhr.responseText);
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => {
+          console.error('Network error during upload');
+          reject(new Error('Network error during upload'));
+        };
+
+        xhr.open('PUT', uploadUri);
+        xhr.setRequestHeader('Content-Type', videoFile.type);
+        xhr.send(videoFile);
+      });
+    } catch (error) {
+      console.error('YouTube upload error:', error);
+      setUploadStatus('error');
+      setUploadError(error instanceof Error ? error.message : 'Upload failed');
+      return null;
+    }
+  };
+
   const submitRegistration = async () => {
     if (!selectedEventId || !authenticatedUserId) {
       toast({ title: 'Error', description: 'Please verify your email first.', variant: 'destructive' });
@@ -443,9 +543,38 @@ const Register = () => {
           toast({ title: 'Registration Failed', description: 'Could not save registration. Please try again.', variant: 'destructive' });
           return false;
         }
+
+        // Send webhook for college registration (no video)
+        const formData = new FormData();
+        formData.append('user_id', authenticatedUserId);
+        formData.append('session_id', sessionId);
+        formData.append('event_id', selectedEventId);
+        formData.append('event_name', selectedEvent?.name || '');
+        formData.append('role', role || '');
+        formData.append('first_name', personalInfo.firstName);
+        formData.append('last_name', personalInfo.lastName);
+        formData.append('email', personalInfo.email);
+        formData.append('phone', phoneDigits);
+        formData.append('age', personalInfo.age);
+        formData.append('city', personalInfo.city);
+        if (personalInfo.collegeName) formData.append('college_name', personalInfo.collegeName);
+        if (personalInfo.degree) formData.append('degree', personalInfo.degree);
+        if (personalInfo.branch) formData.append('branch', personalInfo.branch);
+        formData.append('year_of_studying', storyDetails.classLevel);
+        formData.append('story_title', storyDetails.title);
+        formData.append('category', storyDetails.category);
+        formData.append('class_level', storyDetails.classLevel);
+        formData.append('story_description', storyDetails.description);
+
+        try {
+          await fetch(CLG_WEBHOOK_URL, { method: 'POST', body: formData, mode: 'no-cors' });
+          console.log('College webhook sent successfully');
+        } catch (webhookError) {
+          console.error('College webhook error:', webhookError);
+        }
       } else {
-        // Insert into registrations table for school events
-        const { error: dbError } = await supabase.from('registrations').insert({
+        // School event: First create registration, then upload video
+        const { data: insertedReg, error: dbError } = await supabase.from('registrations').insert({
           user_id: authenticatedUserId,
           event_id: selectedEventId,
           first_name: personalInfo.firstName,
@@ -458,59 +587,38 @@ const Register = () => {
           category: storyDetails.category,
           class_level: storyDetails.classLevel,
           story_description: storyDetails.description,
-        });
+        }).select('id').single();
 
-        if (dbError) {
+        if (dbError || !insertedReg) {
           console.error('Database error:', dbError);
           toast({ title: 'Registration Failed', description: 'Could not save registration. Please try again.', variant: 'destructive' });
           return false;
         }
+
+        const registrationId = insertedReg.id;
+        console.log('Registration created with ID:', registrationId);
+
+        // Upload video to YouTube
+        if (storyDetails.videoFile) {
+          toast({ title: 'Uploading Video', description: 'Please wait while your video is uploaded to YouTube...' });
+          
+          const youtubeUrl = await uploadVideoToYouTube(storyDetails.videoFile, registrationId);
+          
+          if (!youtubeUrl) {
+            // Video upload failed - registration is saved but without video
+            toast({ 
+              title: 'Video Upload Issue', 
+              description: 'Registration saved but video upload failed. Please contact support.', 
+              variant: 'destructive' 
+            });
+            // Still return true as the registration was saved
+          } else {
+            console.log('Video uploaded successfully:', youtubeUrl);
+          }
+        }
       }
 
       saveUserSession(personalInfo.email, personalInfo.firstName, authenticatedUserId);
-
-      // Webhook - use different URLs for school vs college
-      const webhookUrl = isCollegeEvent ? CLG_WEBHOOK_URL : WEBHOOK_URL;
-      const formData = new FormData();
-      formData.append('user_id', authenticatedUserId);
-      formData.append('session_id', sessionId);
-      formData.append('event_id', selectedEventId);
-      formData.append('event_name', selectedEvent?.name || '');
-      formData.append('role', role || '');
-      formData.append('first_name', personalInfo.firstName);
-      formData.append('last_name', personalInfo.lastName);
-      formData.append('email', personalInfo.email);
-      formData.append('phone', phoneDigits);
-      formData.append('age', personalInfo.age);
-      formData.append('city', personalInfo.city);
-
-      if (role === 'school' && personalInfo.schoolName) {
-        formData.append('school_name', personalInfo.schoolName);
-      }
-      if (role === 'college') {
-        if (personalInfo.collegeName) formData.append('college_name', personalInfo.collegeName);
-        if (personalInfo.degree) formData.append('degree', personalInfo.degree);
-        if (personalInfo.branch) formData.append('branch', personalInfo.branch);
-      }
-
-      formData.append('year_of_studying', storyDetails.classLevel);
-      formData.append('story_title', storyDetails.title);
-      formData.append('category', storyDetails.category);
-      formData.append('class_level', storyDetails.classLevel);
-      formData.append('story_description', storyDetails.description);
-
-      // Only append video for school events (not PDF for college events)
-      if (!isCollegeEvent && storyDetails.videoFile) {
-        formData.append('video', storyDetails.videoFile);
-      }
-
-      try {
-        await fetch(webhookUrl, { method: 'POST', body: formData, mode: 'no-cors' });
-        console.log('Webhook sent successfully to:', webhookUrl);
-      } catch (webhookError) {
-        console.error('Webhook error:', webhookError);
-      }
-
       return true;
     } catch (error) {
       console.error('Submission error:', error);
@@ -1081,11 +1189,49 @@ const Register = () => {
 
             {/* Step 6 Review Buttons */}
             {((isPaymentEnabled && currentStep === 6) || (!isPaymentEnabled && currentStep === 5)) && (
-              <div className="flex justify-between mt-8">
-                <Button variant="ghost" onClick={handlePrev} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4 mr-2" /> Previous</Button>
-                <Button onClick={handleNext} disabled={isSubmitting} variant="hero" className="ml-auto">
-                  {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</> : <><Check className="w-4 h-4 mr-2" />Submit Registration</>}
-                </Button>
+              <div className="space-y-4 mt-8">
+                {/* Upload Progress UI */}
+                {uploadStatus !== 'idle' && uploadStatus !== 'complete' && role === 'school' && (
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        {uploadStatus === 'initializing' && 'Initializing upload...'}
+                        {uploadStatus === 'uploading' && `Uploading video: ${uploadProgress}%`}
+                        {uploadStatus === 'processing' && 'Processing video...'}
+                        {uploadStatus === 'error' && 'Upload failed'}
+                      </span>
+                      {uploadStatus === 'uploading' && (
+                        <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+                      )}
+                    </div>
+                    <div className="w-full bg-secondary rounded-full h-2">
+                      <div 
+                        className={cn(
+                          "h-2 rounded-full transition-all duration-300",
+                          uploadStatus === 'error' ? "bg-destructive" : "bg-primary"
+                        )}
+                        style={{ width: `${uploadStatus === 'processing' ? 100 : uploadProgress}%` }}
+                      />
+                    </div>
+                    {uploadError && (
+                      <p className="text-sm text-destructive">{uploadError}</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <Button variant="ghost" onClick={handlePrev} disabled={isSubmitting} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4 mr-2" /> Previous</Button>
+                  <Button onClick={handleNext} disabled={isSubmitting || uploadStatus === 'uploading'} variant="hero" className="ml-auto">
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {uploadStatus === 'uploading' ? `Uploading ${uploadProgress}%` : 'Submitting...'}
+                      </>
+                    ) : (
+                      <><Check className="w-4 h-4 mr-2" />Submit Registration</>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
 

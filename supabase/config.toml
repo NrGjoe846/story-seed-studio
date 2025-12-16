@@ -2,3 +2,9 @@ project_id = "womxlijnyxvfndbyxefc"
 
 [functions.send-otp]
 verify_jwt = false
+
+[functions.youtube-upload-init]
+verify_jwt = false
+
+[functions.youtube-upload-complete]
+verify_jwt = false
