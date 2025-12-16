@@ -184,7 +184,7 @@ const Register = () => {
     if (eventIdFromUrl && events.length > 0) {
       setSelectedEventId(eventIdFromUrl);
       setIsEventLocked(true);
-      
+
       // Auto-set role based on event type
       const event = events.find(e => e.id === eventIdFromUrl);
       if (event) {
@@ -228,7 +228,7 @@ const Register = () => {
         setPersonalInfo(prev => ({ ...prev, email: session.user.email || '' }));
         localStorage.setItem('story_seed_user_email', session.user.email || '');
         localStorage.setItem('story_seed_user_id', session.user.id);
-        
+
         // Determine which step to show based on role (will be updated when events load)
         const savedRole = localStorage.getItem('story_seed_user_role');
         if (savedRole) {
@@ -257,7 +257,7 @@ const Register = () => {
         setPersonalInfo(prev => ({ ...prev, email: session.user.email || '' }));
         localStorage.setItem('story_seed_user_email', session.user.email || '');
         localStorage.setItem('story_seed_user_id', session.user.id);
-        
+
         // Don't auto-navigate here, let the user click Continue
         if (event === 'SIGNED_IN') {
           toast({ title: 'Email Verified! ✓', description: 'Click Continue to proceed.' });
@@ -483,7 +483,7 @@ const Register = () => {
       formData.append('phone', phoneDigits);
       formData.append('age', personalInfo.age);
       formData.append('city', personalInfo.city);
-      
+
       if (role === 'school' && personalInfo.schoolName) {
         formData.append('school_name', personalInfo.schoolName);
       }
@@ -492,7 +492,7 @@ const Register = () => {
         if (personalInfo.degree) formData.append('degree', personalInfo.degree);
         if (personalInfo.branch) formData.append('branch', personalInfo.branch);
       }
-      
+
       formData.append('year_of_studying', storyDetails.classLevel);
       formData.append('story_title', storyDetails.title);
       formData.append('category', storyDetails.category);
@@ -524,13 +524,13 @@ const Register = () => {
   const handleNext = async () => {
     if (currentStep === 1) {
       if (!validateStep1()) return;
-      
+
       // Check if role was already auto-set (for single-type events from URL)
       if (role) {
         setCurrentStep(3);
         return;
       }
-      
+
       // Check event type for auto-skip
       const event = events.find(e => e.id === selectedEventId);
       if (event?.event_type === 'school') {
@@ -710,9 +710,9 @@ const Register = () => {
                           </p>
                         )}
                       </div>
-                      <Button 
-                        variant="hero" 
-                        className="w-full" 
+                      <Button
+                        variant="hero"
+                        className="w-full"
                         onClick={() => {
                           const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                           if (isMobile) {
@@ -1037,45 +1037,6 @@ const Register = () => {
                   <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                     <h3 className="font-semibold text-foreground">Story Details</h3>
                     <div className="flex flex-col md:flex-row gap-6 items-center">
-                      {/* Book Preview on Left */}
-                      {role === 'college' && (
-                        <div className="hidden md:flex flex-shrink-0 items-center justify-center pl-2 pr-6 border-r border-border/50">
-                          <div className="relative w-40 h-56 bg-gradient-to-br from-primary to-rose-900 rounded-xl flex items-center justify-center shadow-inner overflow-hidden">
-                            {/* Studio Light Effect */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
-                            <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/10 blur-3xl rounded-full pointer-events-none"></div>
-
-                            {/* 3D Book Container */}
-                            <div className="relative w-28 h-40 preserve-3d rotate-y-[-25deg] rotate-x-[10deg] shadow-2xl transition-transform duration-700 ease-out hover:rotate-y-[-15deg] hover:rotate-x-[0deg] group perspective-1000">
-
-                              {/* Front Cover */}
-                              <div className="absolute inset-0 bg-white z-20 rounded-[2px] shadow-sm transform translate-z-[6px]">
-                                {storyDetails.coverPage ? (
-                                  <img src={URL.createObjectURL(storyDetails.coverPage)} alt="Cover" className="w-full h-full object-cover rounded-[2px]" />
-                                ) : (
-                                  <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-2 border border-gray-100">
-                                    <FileText className="w-8 h-8 text-primary/40 mb-2" />
-                                    <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Book<br />Cover</span>
-                                  </div>
-                                )}
-                                {/* Sheen/Reflection */}
-                                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-50 pointer-events-none rounded-[2px]"></div>
-                                {/* Spine Fold Shadow */}
-                                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-r from-black/20 to-transparent z-30"></div>
-                              </div>
-
-                              {/* Pages / Thickness (Right Side) */}
-                              <div className="absolute top-[2px] bottom-[2px] left-full w-[12px] bg-[#fffbf7] origin-left rotate-y-[90deg] border-l border-gray-200/50 shadow-inner flex flex-col justify-center overflow-hidden">
-                                <div className="w-full h-full bg-[repeating-linear-gradient(90deg,transparent,transparent_1px,rgba(0,0,0,0.08)_1px,rgba(0,0,0,0.08)_2px)]"></div>
-                              </div>
-
-                              {/* Fake Back Shadow for Depth */}
-                              <div className="absolute inset-0 bg-black/40 translate-z-[-6px] translate-x-[4px] blur-sm rounded-md"></div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
                       {/* Text Details */}
                       <div className="flex-1 space-y-2 text-sm">
                         <p><span className="text-muted-foreground">Title:</span> {storyDetails.title}</p>
