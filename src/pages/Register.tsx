@@ -301,7 +301,7 @@ const Register = () => {
 
       toast({
         title: 'Magic Link Sent',
-        description: `Check your inbox and click the link. Redirect: ${redirectUrl}`,
+        description: 'Check your inbox and click the link to verify your email.',
       });
       setEmailStep('sent');
     } catch (error: any) {
@@ -615,18 +615,27 @@ const Register = () => {
         if (storyDetails.videoFile) {
           toast({ title: 'Uploading Video', description: 'Please wait while your video is uploaded to YouTube...' });
           
-          const youtubeUrl = await uploadVideoToYouTube(storyDetails.videoFile, registrationId);
-          
-          if (!youtubeUrl) {
-            // Video upload failed - registration is saved but without video
+          try {
+            const youtubeUrl = await uploadVideoToYouTube(storyDetails.videoFile, registrationId);
+            
+            if (!youtubeUrl) {
+              // Video upload failed - registration is saved but without video
+              toast({ 
+                title: 'Video Upload Issue', 
+                description: 'Registration saved but video upload failed. Please contact support.', 
+                variant: 'destructive' 
+              });
+            } else {
+              console.log('Video uploaded successfully:', youtubeUrl);
+              toast({ title: 'Video Uploaded!', description: 'Your video has been uploaded successfully.' });
+            }
+          } catch (uploadError) {
+            console.error('Video upload error:', uploadError);
             toast({ 
               title: 'Video Upload Issue', 
-              description: 'Registration saved but video upload failed. Please contact support.', 
+              description: 'Registration saved but video upload encountered an issue.', 
               variant: 'destructive' 
             });
-            // Still return true as the registration was saved
-          } else {
-            console.log('Video uploaded successfully:', youtubeUrl);
           }
         }
       }
@@ -824,12 +833,6 @@ const Register = () => {
                         <h3 className="font-semibold text-blue-800 mb-2">Check Your Email</h3>
                         <p className="text-blue-600 text-sm mb-4">We've sent a magic link to <strong>{verificationEmail}</strong></p>
                         <p className="text-blue-600 text-xs">Click the link in the email to continue your registration.</p>
-                        {lastMagicLinkRedirectUrl && (
-                          <p className="text-blue-700 text-xs mt-3">
-                            Expected redirect after verification:{" "}
-                            <span className="font-mono break-all">{lastMagicLinkRedirectUrl}</span>
-                          </p>
-                        )}
                       </div>
                       <Button
                         variant="hero"
