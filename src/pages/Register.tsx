@@ -116,6 +116,7 @@ const Register = () => {
   const [verificationEmail, setVerificationEmail] = useState('');
   const [emailStep, setEmailStep] = useState<'email' | 'sent' | 'verified'>('email');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [lastMagicLinkRedirectUrl, setLastMagicLinkRedirectUrl] = useState('');
   const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(null);
 
   const [personalInfo, setPersonalInfo] = useState({
@@ -283,14 +284,20 @@ const Register = () => {
       // Use selectedEventId (from URL or dropdown) for redirect
       const eventId = selectedEventId || eventIdFromUrl;
       const redirectUrl = `${window.location.origin}/register${eventId ? `?eventId=${eventId}` : ''}`;
-      const { error } = await supabase.auth.signInWithOtp({ 
+      setLastMagicLinkRedirectUrl(redirectUrl);
+
+      const { error } = await supabase.auth.signInWithOtp({
         email: verificationEmail,
         options: {
-          emailRedirectTo: redirectUrl
-        }
+          emailRedirectTo: redirectUrl,
+        },
       });
       if (error) throw error;
-      toast({ title: 'Magic Link Sent', description: 'Please check your email inbox and click the verification link.' });
+
+      toast({
+        title: 'Magic Link Sent',
+        description: `Check your inbox and click the link. Redirect: ${redirectUrl}`,
+      });
       setEmailStep('sent');
     } catch (error: any) {
       console.error('Error sending magic link:', error);
@@ -299,7 +306,6 @@ const Register = () => {
       setSendingEmail(false);
     }
   };
-
   const validateStep1 = () => {
     if (emailStep !== 'verified') {
       toast({ title: 'Email Verification Required', description: 'Please verify your email to continue.', variant: 'destructive' });
@@ -697,6 +703,12 @@ const Register = () => {
                         <h3 className="font-semibold text-blue-800 mb-2">Check Your Email</h3>
                         <p className="text-blue-600 text-sm mb-4">We've sent a magic link to <strong>{verificationEmail}</strong></p>
                         <p className="text-blue-600 text-xs">Click the link in the email to continue your registration.</p>
+                        {lastMagicLinkRedirectUrl && (
+                          <p className="text-blue-700 text-xs mt-3">
+                            Expected redirect after verification:{" "}
+                            <span className="font-mono break-all">{lastMagicLinkRedirectUrl}</span>
+                          </p>
+                        )}
                       </div>
                       <Button 
                         variant="hero" 
