@@ -417,27 +417,63 @@ const Register = () => {
         throw new Error(initResponse.data?.error || 'Failed to initialize YouTube upload');
       }
 
-      const uploadUri = initResponse.data.uploadUri;
-      console.log('Upload URI obtained:', uploadUri);
+      const uploadUri: string = initResponse.data.uploadUri;
+      console.log('Upload URI obtained');
 
       // Step 2: Upload video directly to YouTube
       setUploadStatus('uploading');
 
-      return new Promise((resolve, reject) => {
-        const totalSize = videoFile.size;
-        const chunkSize = 8 * 1024 * 1024; // 8MB chunks
+      const totalSize = videoFile.size;
+      const chunkSize = 8 * 1024 * 1024; // 8MB
+
+      const parseVideoId = (raw: string | null | undefined): string | null => {
+        if (!raw) return null;
+        try {
+          const json = JSON.parse(raw);
+          return typeof json?.id === 'string' ? json.id : null;
+        } catch {
+          return null;
+        }
+      };
+
+      return await new Promise<string>((resolve, reject) => {
+        const finishFromProbe = () => {
+          const probe = new XMLHttpRequest();
+          probe.responseType = 'text';
+          probe.onload = () => {
+            if (probe.status === 200 || probe.status === 201) {
+              const videoId = parseVideoId(probe.responseText);
+              if (!videoId) {
+                console.error('Probe did not return a video ID:', probe.responseText);
+                reject(new Error('Upload finished but could not confirm video ID'));
+                return;
+              }
+              resolve(`https://youtu.be/${videoId}`);
+              return;
+            }
+            console.error('YouTube probe failed:', probe.status, probe.responseText);
+            reject(new Error(`Upload finished but confirmation failed (status ${probe.status})`));
+          };
+          probe.onerror = () => {
+            reject(new Error('Network error while confirming upload'));
+          };
+          probe.open('PUT', uploadUri);
+          // Query upload status (no body)
+          probe.setRequestHeader('Content-Range', `bytes */${totalSize}`);
+          probe.send(null);
+        };
 
         const uploadChunk = (startByte: number) => {
           const endByte = Math.min(startByte + chunkSize, totalSize) - 1;
           const chunk = videoFile.slice(startByte, endByte + 1);
 
           const xhr = new XMLHttpRequest();
-          xhr.responseType = 'json';
+          xhr.responseType = 'text';
 
           xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
               const overallLoaded = startByte + event.loaded;
-              const progress = Math.min(100, Math.round((overallLoaded / totalSize) * 100));
+              const progress = Math.min(99, Math.round((overallLoaded / totalSize) * 100));
               setUploadProgress(progress);
             }
           };
@@ -445,31 +481,39 @@ const Register = () => {
           xhr.onload = async () => {
             // 200/201: upload complete with a video resource JSON body
             if (xhr.status === 200 || xhr.status === 201) {
-              try {
-                const response = xhr.response as any;
-                const videoId: string | undefined = response?.id;
-                if (!videoId) throw new Error('YouTube did not return a video ID');
-
-                console.log('Video uploaded successfully, ID:', videoId);
-
-                // Step 3: Save YouTube link to database
-                setUploadStatus('processing');
-                const completeResponse = await supabase.functions.invoke('youtube-upload-complete', {
-                  body: { videoId, registrationId },
-                });
-
-                if (completeResponse.error) {
-                  console.error('Failed to save YouTube link:', completeResponse.error);
-                  // Don't fail the upload, the video is already uploaded
-                }
-
-                setUploadStatus('complete');
-                setUploadProgress(100);
-                resolve(`https://youtu.be/${videoId}`);
-              } catch (e) {
-                console.error('Error processing YouTube completion response:', e);
+              const videoId = parseVideoId(xhr.responseText);
+              if (!videoId) {
+                console.error('YouTube did not return a video ID:', xhr.responseText);
                 reject(new Error('Upload finished but could not confirm video ID'));
+                return;
               }
+
+              console.log('Video uploaded successfully, ID:', videoId);
+
+              // Step 3: Save YouTube link to database
+              setUploadStatus('processing');
+              const youtubeUrl = `https://youtu.be/${videoId}`;
+
+              const completeResponse = await supabase.functions.invoke('youtube-upload-complete', {
+                body: { videoId, registrationId },
+              });
+
+              if (completeResponse.error) {
+                console.error('Failed to save YouTube link via edge function:', completeResponse.error);
+                // Fallback attempt (may fail due to RLS)
+                const { error: fallbackError } = await supabase
+                  .from('registrations')
+                  .update({ yt_link: youtubeUrl })
+                  .eq('id', registrationId);
+
+                if (fallbackError) {
+                  console.error('Fallback yt_link update failed:', fallbackError);
+                }
+              }
+
+              setUploadStatus('complete');
+              setUploadProgress(100);
+              resolve(youtubeUrl);
               return;
             }
 
@@ -477,22 +521,25 @@ const Register = () => {
             if (xhr.status === 308) {
               const range = xhr.getResponseHeader('Range');
               // Range is typically like: "bytes=0-1048575"
-              const match = range?.match(/bytes=0-(\d+)/);
+              const match = range?.match(/bytes=\d+-(\d+)/);
               const nextStart = match ? parseInt(match[1], 10) + 1 : endByte + 1;
 
-              const progress = Math.min(100, Math.round((nextStart / totalSize) * 100));
-              setUploadProgress(progress);
-
+              // If YouTube reports it has received the whole file but still returns 308,
+              // do a final status probe to get the video resource / ID.
               if (nextStart >= totalSize) {
-                reject(new Error('YouTube reported incomplete upload. Please retry.'));
+                setUploadStatus('processing');
+                finishFromProbe();
                 return;
               }
+
+              const progress = Math.min(99, Math.round((nextStart / totalSize) * 100));
+              setUploadProgress(progress);
 
               uploadChunk(nextStart);
               return;
             }
 
-            console.error('YouTube upload failed:', xhr.status, xhr.response);
+            console.error('YouTube upload failed:', xhr.status, xhr.responseText);
             reject(new Error(`Upload failed with status ${xhr.status}`));
           };
 
@@ -522,34 +569,42 @@ const Register = () => {
       toast({ title: 'Error', description: 'Please verify your email first.', variant: 'destructive' });
       return false;
     }
+
     setIsSubmitting(true);
+
     try {
       const phoneDigits = personalInfo.phone.replace(/\D/g, '');
       const selectedEvent = events.find(e => e.id === selectedEventId);
       const isCollegeEvent = role === 'college';
 
-      // Check for existing registration
       const tableName = isCollegeEvent ? 'clg_registrations' : 'registrations';
-      const { data: existingByPhone } = await supabase
+      const selectColumns = isCollegeEvent ? 'id' : 'id, yt_link';
+
+      // Check for existing registration (by phone + event)
+      const { data: existingByPhone, error: existingError } = await supabase
         .from(tableName)
-        .select('id')
+        .select(selectColumns)
         .eq('event_id', selectedEventId)
         .ilike('phone', `%${phoneDigits.slice(-10)}`);
 
-      if (existingByPhone && existingByPhone.length > 0) {
-        toast({ title: 'Already Registered', description: 'You have already registered for this event.', variant: 'destructive' });
-        setIsSubmitting(false);
-        return false;
+      if (existingError) {
+        console.error('Existing registration check error:', existingError);
       }
 
+      const existing = (existingByPhone as any[] | null)?.[0];
       const sessionId = getSessionId();
 
       if (isCollegeEvent) {
+        if (existing?.id) {
+          toast({ title: 'Already Registered', description: 'You have already registered for this event.', variant: 'destructive' });
+          return false;
+        }
+
         // Upload PDF to storage for college registrations
         let pdfUrl = null;
         if (storyDetails.storyPdf) {
           const fileName = `${authenticatedUserId}-${Date.now()}-${storyDetails.storyPdf.name}`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('college-story-pdfs')
             .upload(fileName, storyDetails.storyPdf);
 
@@ -619,58 +674,69 @@ const Register = () => {
           console.error('College webhook error:', webhookError);
         }
       } else {
-        // School event: First create registration, then upload video
-        const { data: insertedReg, error: dbError } = await supabase.from('registrations').insert({
-          user_id: authenticatedUserId,
-          event_id: selectedEventId,
-          first_name: personalInfo.firstName,
-          last_name: personalInfo.lastName,
-          email: personalInfo.email.toLowerCase(),
-          phone: phoneDigits,
-          age: parseInt(personalInfo.age),
-          city: personalInfo.city,
-          story_title: storyDetails.title,
-          category: storyDetails.category,
-          class_level: storyDetails.classLevel,
-          story_description: storyDetails.description,
-        }).select('id').single();
+        // School event: create (or reuse) registration, then upload video
+        let registrationId: string | null = null;
 
-        if (dbError || !insertedReg) {
-          console.error('Database error:', dbError);
-          toast({ title: 'Registration Failed', description: 'Could not save registration. Please try again.', variant: 'destructive' });
+        if (existing?.id) {
+          // If yt_link already exists, block duplicates. If missing, allow retry upload.
+          if (existing.yt_link) {
+            toast({ title: 'Already Registered', description: 'You have already registered for this event.', variant: 'destructive' });
+            return false;
+          }
+          registrationId = existing.id;
+          toast({ title: 'Saved Registration Found', description: 'Retrying YouTube upload for your existing registration...' });
+        }
+
+        if (!registrationId) {
+          const { data: insertedReg, error: dbError } = await supabase
+            .from('registrations')
+            .insert({
+              user_id: authenticatedUserId,
+              event_id: selectedEventId,
+              first_name: personalInfo.firstName,
+              last_name: personalInfo.lastName,
+              email: personalInfo.email.toLowerCase(),
+              phone: phoneDigits,
+              age: parseInt(personalInfo.age),
+              city: personalInfo.city,
+              story_title: storyDetails.title,
+              category: storyDetails.category,
+              class_level: storyDetails.classLevel,
+              story_description: storyDetails.description,
+            })
+            .select('id')
+            .single();
+
+          if (dbError || !insertedReg) {
+            console.error('Database error:', dbError);
+            toast({ title: 'Registration Failed', description: 'Could not save registration. Please try again.', variant: 'destructive' });
+            return false;
+          }
+
+          registrationId = insertedReg.id;
+          console.log('Registration created with ID:', registrationId);
+        }
+
+        if (!storyDetails.videoFile) {
+          toast({ title: 'Video Required', description: 'Please upload your story video.', variant: 'destructive' });
           return false;
         }
 
-        const registrationId = insertedReg.id;
-        console.log('Registration created with ID:', registrationId);
+        toast({ title: 'Uploading Video', description: 'Please wait while your video is uploaded to YouTube...' });
 
-        // Upload video to YouTube
-        if (storyDetails.videoFile) {
-          toast({ title: 'Uploading Video', description: 'Please wait while your video is uploaded to YouTube...' });
-          
-          try {
-            const youtubeUrl = await uploadVideoToYouTube(storyDetails.videoFile, registrationId);
-            
-            if (!youtubeUrl) {
-              // Video upload failed - registration is saved but without video
-              toast({ 
-                title: 'Video Upload Issue', 
-                description: 'Registration saved but video upload failed. Please contact support.', 
-                variant: 'destructive' 
-              });
-            } else {
-              console.log('Video uploaded successfully:', youtubeUrl);
-              toast({ title: 'Video Uploaded!', description: 'Your video has been uploaded successfully.' });
-            }
-          } catch (uploadError) {
-            console.error('Video upload error:', uploadError);
-            toast({ 
-              title: 'Video Upload Issue', 
-              description: 'Registration saved but video upload encountered an issue.', 
-              variant: 'destructive' 
-            });
-          }
+        const youtubeUrl = await uploadVideoToYouTube(storyDetails.videoFile, registrationId);
+
+        if (!youtubeUrl) {
+          toast({
+            title: 'Video Upload Failed',
+            description: 'Your registration was saved, but the video upload did not complete. Please try again.',
+            variant: 'destructive',
+          });
+          return false;
         }
+
+        console.log('Video uploaded successfully:', youtubeUrl);
+        toast({ title: 'Video Uploaded!', description: 'Your video has been uploaded successfully.' });
       }
 
       saveUserSession(personalInfo.email, personalInfo.firstName, authenticatedUserId);
