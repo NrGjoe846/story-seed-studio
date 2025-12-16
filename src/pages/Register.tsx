@@ -424,57 +424,90 @@ const Register = () => {
       setUploadStatus('uploading');
 
       return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(progress);
-            console.log(`Upload progress: ${progress}%`);
-          }
-        };
+        const totalSize = videoFile.size;
+        const chunkSize = 8 * 1024 * 1024; // 8MB chunks
 
-        xhr.onload = async () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              const videoId = response.id;
-              console.log('Video uploaded successfully, ID:', videoId);
+        const uploadChunk = (startByte: number) => {
+          const endByte = Math.min(startByte + chunkSize, totalSize) - 1;
+          const chunk = videoFile.slice(startByte, endByte + 1);
 
-              // Step 3: Save YouTube link to database
-              setUploadStatus('processing');
-              const completeResponse = await supabase.functions.invoke('youtube-upload-complete', {
-                body: {
-                  videoId,
-                  registrationId,
-                },
-              });
+          const xhr = new XMLHttpRequest();
+          xhr.responseType = 'json';
 
-              if (completeResponse.error) {
-                console.error('Failed to save YouTube link:', completeResponse.error);
-                // Don't fail the upload, just log it - the video is already uploaded
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const overallLoaded = startByte + event.loaded;
+              const progress = Math.min(100, Math.round((overallLoaded / totalSize) * 100));
+              setUploadProgress(progress);
+            }
+          };
+
+          xhr.onload = async () => {
+            // 200/201: upload complete with a video resource JSON body
+            if (xhr.status === 200 || xhr.status === 201) {
+              try {
+                const response = xhr.response as any;
+                const videoId: string | undefined = response?.id;
+                if (!videoId) throw new Error('YouTube did not return a video ID');
+
+                console.log('Video uploaded successfully, ID:', videoId);
+
+                // Step 3: Save YouTube link to database
+                setUploadStatus('processing');
+                const completeResponse = await supabase.functions.invoke('youtube-upload-complete', {
+                  body: { videoId, registrationId },
+                });
+
+                if (completeResponse.error) {
+                  console.error('Failed to save YouTube link:', completeResponse.error);
+                  // Don't fail the upload, the video is already uploaded
+                }
+
+                setUploadStatus('complete');
+                setUploadProgress(100);
+                resolve(`https://youtu.be/${videoId}`);
+              } catch (e) {
+                console.error('Error processing YouTube completion response:', e);
+                reject(new Error('Upload finished but could not confirm video ID'));
+              }
+              return;
+            }
+
+            // 308: resumable upload incomplete; continue from server-reported range
+            if (xhr.status === 308) {
+              const range = xhr.getResponseHeader('Range');
+              // Range is typically like: "bytes=0-1048575"
+              const match = range?.match(/bytes=0-(\d+)/);
+              const nextStart = match ? parseInt(match[1], 10) + 1 : endByte + 1;
+
+              const progress = Math.min(100, Math.round((nextStart / totalSize) * 100));
+              setUploadProgress(progress);
+
+              if (nextStart >= totalSize) {
+                reject(new Error('YouTube reported incomplete upload. Please retry.'));
+                return;
               }
 
-              setUploadStatus('complete');
-              resolve(`https://youtu.be/${videoId}`);
-            } catch (parseError) {
-              console.error('Error parsing YouTube response:', parseError);
-              reject(new Error('Failed to process YouTube response'));
+              uploadChunk(nextStart);
+              return;
             }
-          } else {
-            console.error('YouTube upload failed:', xhr.status, xhr.responseText);
+
+            console.error('YouTube upload failed:', xhr.status, xhr.response);
             reject(new Error(`Upload failed with status ${xhr.status}`));
-          }
+          };
+
+          xhr.onerror = () => {
+            console.error('Network error during upload');
+            reject(new Error('Network error during upload'));
+          };
+
+          xhr.open('PUT', uploadUri);
+          xhr.setRequestHeader('Content-Type', videoFile.type || 'application/octet-stream');
+          xhr.setRequestHeader('Content-Range', `bytes ${startByte}-${endByte}/${totalSize}`);
+          xhr.send(chunk);
         };
 
-        xhr.onerror = () => {
-          console.error('Network error during upload');
-          reject(new Error('Network error during upload'));
-        };
-
-        xhr.open('PUT', uploadUri);
-        xhr.setRequestHeader('Content-Type', videoFile.type);
-        xhr.send(videoFile);
+        uploadChunk(0);
       });
     } catch (error) {
       console.error('YouTube upload error:', error);
