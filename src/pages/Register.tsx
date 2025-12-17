@@ -183,20 +183,33 @@ const Register = () => {
   }, []);
 
   // Lock event selection if eventId is in URL and auto-set role for single-type events
+  // Lock event selection if eventId is in URL and event exists in active events
   useEffect(() => {
     if (eventIdFromUrl && events.length > 0) {
-      setSelectedEventId(eventIdFromUrl);
-      setIsEventLocked(true);
-
-      // Auto-set role based on event type
+      // Check if the event exists in the active events list
       const event = events.find(e => e.id === eventIdFromUrl);
+      
       if (event) {
+        // Event exists - lock it and set the selection
+        setSelectedEventId(eventIdFromUrl);
+        setIsEventLocked(true);
+        
+        // Auto-set role based on event type
         if (event.event_type === 'school') {
           setRole('school');
         } else if (event.event_type === 'college') {
           setRole('college');
         }
         // For 'both' type, user needs to select role manually
+      } else {
+        // Event doesn't exist - clear URL and allow user to select a new event
+        setSelectedEventId('');
+        setIsEventLocked(false);
+        toast({
+          title: 'Event Not Available',
+          description: 'The selected event is no longer available. Please choose another event.',
+          variant: 'destructive'
+        });
       }
     }
   }, [eventIdFromUrl, events]);
