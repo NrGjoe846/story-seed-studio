@@ -167,14 +167,7 @@ export const HeroSection = () => {
 
         {/* Scroll Indicator */}
         <div className="absolute bottom-8 left-0 right-0 flex justify-center animate-bounce">
-          <button onClick={() => {
-          window.scrollTo({
-            top: window.innerHeight,
-            behavior: 'smooth'
-          });
-        }} className="p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 hover:bg-background/80 transition-colors shadow-lg group" aria-label="Scroll down">
-            
-          </button>
+          
         </div>
       </div>
     </section>;
