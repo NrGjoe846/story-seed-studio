@@ -51,12 +51,12 @@ const Voting = () => {
   const [canVoteStatus, setCanVoteStatus] = useState<{ canVote: boolean; reason?: string }>({ canVote: true });
   const [checkingVote, setCheckingVote] = useState(false);
   const [hasRecordedView, setHasRecordedView] = useState(false);
+  const [votingOpen, setVotingOpen] = useState(false);
 
-  // Store IDs of participants that should be shown (top 45 from judge rankings, excluding top 6)
+  // Store IDs of participants that should be shown (excluding judge top 6)
   const [eligibleForVotingIds, setEligibleForVotingIds] = useState<Set<string>>(new Set());
 
-  // Fetch judge rankings and get top 45 (excluding top 6 winners) for voting page
-  // Voting only opens after ALL videos have been reviewed by judges
+  // Fetch judge rankings and get eligible participants for voting (excluding top 6 winners)
   const fetchJudgeRankingsForVoting = async (eventIdToFetch: string) => {
     try {
       // Fetch registrations for this event
@@ -99,18 +99,6 @@ const Voting = () => {
         }
       });
 
-      // Check if ALL registrations have been reviewed by at least one judge
-      const totalRegistrations = registrations.length;
-      const reviewedRegistrations = registrations.filter(reg => scoreData[reg.id]?.count > 0).length;
-      
-      // Only open voting if ALL videos have been reviewed by judges
-      if (reviewedRegistrations < totalRegistrations) {
-        console.log(`Voting not open yet: ${reviewedRegistrations}/${totalRegistrations} videos reviewed`);
-        setEligibleForVotingIds(new Set());
-        setJudgeTop6Ids(new Set());
-        return;
-      }
-
       // Get entries with judge scores, sorted by average score
       const entriesWithScores = registrations
         .map(reg => ({
@@ -143,13 +131,18 @@ const Voting = () => {
       const top6Ids = new Set(top6.slice(0, 6).map(e => e.id));
       setJudgeTop6Ids(top6Ids);
 
-      // Get remaining entries after top 6 for community voting (up to 45)
+      // All remaining entries after top 6 are eligible for community voting
       const remainingAfterTop6 = entriesWithScores.filter(e => !top6Ids.has(e.id));
-      const eligibleForVoting = remainingAfterTop6.slice(0, 45);
       
-      setEligibleForVotingIds(new Set(eligibleForVoting.map(e => e.id)));
+      // If no judge votes yet, all registrations are eligible (admin opened voting manually)
+      if (Object.keys(scoreData).length === 0) {
+        setEligibleForVotingIds(new Set(registrations.map(r => r.id)));
+      } else {
+        setEligibleForVotingIds(new Set(remainingAfterTop6.map(e => e.id)));
+      }
     } catch (error) {
       console.error('Error fetching judge rankings:', error);
+      // On error, still allow voting for all registrations if admin opened voting
       setEligibleForVotingIds(new Set());
       setJudgeTop6Ids(new Set());
     }
@@ -164,7 +157,7 @@ const Voting = () => {
     try {
       const { data: eventData, error: eventError } = await supabase
         .from('events')
-        .select('id, name')
+        .select('id, name, voting_open')
         .eq('id', eventId)
         .single();
 
@@ -172,6 +165,9 @@ const Voting = () => {
         setLoading(false);
         return;
       }
+
+      // Check if admin has opened voting for this event
+      setVotingOpen(eventData.voting_open === true);
 
       const { data: registrations, error } = await supabase
         .from('registrations')
@@ -287,10 +283,50 @@ const Voting = () => {
         )
         .subscribe();
 
+      // Subscribe to events changes (for voting_open status)
+      const eventsChannel = supabase
+        .channel(`voting-events-${eventId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'events',
+            filter: `id=eq.${eventId}`,
+          },
+          (payload) => {
+            if (payload.new && typeof payload.new === 'object' && 'voting_open' in payload.new) {
+              setVotingOpen((payload.new as any).voting_open === true);
+              // Refetch to update eligible participants
+              fetchContestants();
+            }
+          }
+        )
+        .subscribe();
+
+      // Subscribe to votes changes (for real-time judge ranking updates)
+      const votesChannel = supabase
+        .channel(`voting-votes-${eventId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'votes',
+          },
+          () => {
+            // Refetch to update judge rankings
+            fetchJudgeRankingsForVoting(eventId);
+          }
+        )
+        .subscribe();
+
       return () => {
         supabase.removeChannel(registrationsChannel);
         supabase.removeChannel(voterChannel);
         supabase.removeChannel(viewsChannel);
+        supabase.removeChannel(eventsChannel);
+        supabase.removeChannel(votesChannel);
       };
     }
   }, [eventId]);
@@ -696,8 +732,8 @@ const Voting = () => {
     );
   }
 
-  // Show message if judges haven't finished reviewing ALL videos yet
-  if (contestants.length > 0 && eligibleForVotingIds.size === 0) {
+  // Show message if voting is not open by admin
+  if (!votingOpen) {
     return (
       <div className="pt-20 min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md mx-auto px-4">
@@ -705,11 +741,11 @@ const Voting = () => {
             Voting Not Open Yet
           </h1>
           <p className="text-muted-foreground mb-8">
-            Judges are currently reviewing all submissions. Community voting will open after judges complete their evaluations of all videos.
+            Community voting has not been opened for this event yet. Please check back later!
           </p>
           <Link to="/leaderboard">
             <Button variant="hero">
-              View Judge Leaderboard
+              View Leaderboard
             </Button>
           </Link>
         </div>
@@ -719,10 +755,8 @@ const Voting = () => {
 
   // Filter contestants - exclude judge top 6 and apply search query
   const filteredContestants = contestants.filter((contestant) => {
-    // Only show contestants that are in the top 45 from judge rankings (excluding top 6 winners)
-    // If no judge votes yet, show nothing (judges must vote first)
-    if (eligibleForVotingIds.size === 0) return false;
-    if (!eligibleForVotingIds.has(contestant.id)) return false;
+    // Exclude judge top 6 winners from community voting
+    if (judgeTop6Ids.has(contestant.id)) return false;
     
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();

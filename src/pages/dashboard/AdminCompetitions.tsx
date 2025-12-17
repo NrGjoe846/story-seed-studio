@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, X, Check, Trophy, Lock, Unlock, Upload, CreditCard } from 'lucide-react';
+import { Eye, Edit, Trash2, X, Check, Trophy, Lock, Unlock, Upload, CreditCard, Vote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,6 +31,7 @@ interface Event {
   registration_open: boolean | null;
   is_payment_enabled: boolean | null;
   qr_code_url: string | null;
+  voting_open: boolean | null;
   participantCount?: number;
   voteCount?: number;
 }
@@ -251,6 +252,26 @@ const AdminCompetitions = () => {
     }
   };
 
+  const handleToggleVoting = async (eventId: string, isCurrentlyOpen: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ voting_open: !isCurrentlyOpen })
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      toast({
+        title: isCurrentlyOpen ? 'Voting Closed' : 'Voting Opened',
+        description: isCurrentlyOpen
+          ? 'Community voting is now closed for this event.'
+          : 'Community voting is now open for this event.',
+      });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -287,7 +308,7 @@ const AdminCompetitions = () => {
                       <td className="p-4">
                         <div>
                           <p className="font-medium text-foreground">{event.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {event.results_announced && (
                               <span className="text-xs text-green-600 flex items-center gap-1">
                                 <Trophy className="w-3 h-3" /> Results announced
@@ -296,6 +317,11 @@ const AdminCompetitions = () => {
                             {event.is_payment_enabled && (
                               <span className="text-xs text-blue-600 flex items-center gap-1">
                                 <CreditCard className="w-3 h-3" /> Payment enabled
+                              </span>
+                            )}
+                            {event.voting_open && (
+                              <span className="text-xs text-purple-600 flex items-center gap-1">
+                                <Vote className="w-3 h-3" /> Voting open
                               </span>
                             )}
                           </div>
@@ -327,6 +353,15 @@ const AdminCompetitions = () => {
                             title={event.registration_open === false ? "Open Registration" : "Close Registration"}
                           >
                             {event.registration_open === false ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className={event.voting_open ? "text-blue-600" : "text-gray-400"}
+                            onClick={() => handleToggleVoting(event.id, event.voting_open === true)}
+                            title={event.voting_open ? "Close Community Voting" : "Open Community Voting"}
+                          >
+                            <Vote className="w-4 h-4" />
                           </Button>
                           <Button size="sm" variant="ghost" className="text-yellow-600" onClick={() => openWinnersDialog(event)}>
                             <Trophy className="w-4 h-4" />
