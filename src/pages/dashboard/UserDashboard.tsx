@@ -131,6 +131,9 @@ const UserDashboard = () => {
   }, []);
 
   const handleLogout = async () => {
+    // Sign out from Supabase auth first - this clears the session
+    await supabase.auth.signOut();
+    
     // Clear all localStorage including verification status
     localStorage.removeItem('story_seed_user_email');
     localStorage.removeItem('story_seed_user_name');
