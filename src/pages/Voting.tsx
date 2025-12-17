@@ -247,13 +247,30 @@ const Voting = () => {
           return b.total_reviews - a.total_reviews;
         });
 
-      // Get balanced top 6 (2 per class level) - these are WINNERS to exclude from voting
+      // Get balanced top 6 - ranking method:
+      // 1st: Highest from Tiny Tales, 2nd: Highest from Young Dreamers, 3rd: Highest from Story Champions
+      // 4th: 2nd highest from Tiny Tales, 5th: 2nd highest from Young Dreamers, 6th: 2nd highest from Story Champions
       const classLevels = ['Tiny Tales', 'Young Dreamers', 'Story Champions'];
       const top6: typeof entriesWithScores = [];
       
+      // Group by class level
+      const entriesByLevel: Record<string, typeof entriesWithScores> = {};
       for (const level of classLevels) {
-        const entriesForLevel = entriesWithScores.filter(e => e.class_level === level);
-        top6.push(...entriesForLevel.slice(0, 2));
+        entriesByLevel[level] = entriesWithScores.filter(e => e.class_level === level);
+      }
+      
+      // First round: Pick highest from each class level (positions 1, 2, 3)
+      for (const level of classLevels) {
+        if (entriesByLevel[level].length >= 1) {
+          top6.push(entriesByLevel[level][0]);
+        }
+      }
+      
+      // Second round: Pick second highest from each class level (positions 4, 5, 6)
+      for (const level of classLevels) {
+        if (entriesByLevel[level].length >= 2) {
+          top6.push(entriesByLevel[level][1]);
+        }
       }
       
       // Fill remaining with top entries if needed (in case some classes have fewer than 2)

@@ -159,11 +159,25 @@ const Leaderboard = () => {
 
         const classLevels = ['Tiny Tales', 'Young Dreamers', 'Story Champions'];
         const judgeTop6Ids: string[] = [];
-
+        
+        // Group by class level and sort each group
+        const entriesByLevel: Record<string, typeof sortedByJudgeScore> = {};
         for (const level of classLevels) {
-          const entriesForLevel = sortedByJudgeScore.filter(e => e.class_level === level);
-          const selected = entriesForLevel.slice(0, 2);
-          judgeTop6Ids.push(...selected.map(e => e.id));
+          entriesByLevel[level] = sortedByJudgeScore.filter(e => e.class_level === level);
+        }
+        
+        // First round: Pick highest from each class level (positions 1, 2, 3)
+        for (const level of classLevels) {
+          if (entriesByLevel[level].length >= 1) {
+            judgeTop6Ids.push(entriesByLevel[level][0].id);
+          }
+        }
+        
+        // Second round: Pick second highest from each class level (positions 4, 5, 6)
+        for (const level of classLevels) {
+          if (entriesByLevel[level].length >= 2) {
+            judgeTop6Ids.push(entriesByLevel[level][1].id);
+          }
         }
 
         // Fill remaining if needed
@@ -236,22 +250,46 @@ const Leaderboard = () => {
       supabase.removeChannel(clgRegistrationsChannel);
     };
   }, [selectedEvent, events]);
+  // Ranking method: 
+  // 1st: Highest from Tiny Tales, 2nd: Highest from Young Dreamers, 3rd: Highest from Story Champions
+  // 4th: 2nd highest from Tiny Tales, 5th: 2nd highest from Young Dreamers, 6th: 2nd highest from Story Champions
   const getBalancedTop6 = <T extends {
     class_level: string | null;
   },>(sortedEntries: T[], getScore: (e: T) => number): T[] => {
     const classLevels = ['Tiny Tales', 'Young Dreamers', 'Story Champions'];
-    const top6: T[] = [];
+    
+    // Group entries by class level and sort each group by score
+    const entriesByLevel: Record<string, T[]> = {};
     for (const level of classLevels) {
-      const entriesForLevel = sortedEntries.filter(e => e.class_level === level);
-      const selected = entriesForLevel.slice(0, 2);
-      top6.push(...selected);
+      entriesByLevel[level] = sortedEntries
+        .filter(e => e.class_level === level)
+        .sort((a, b) => getScore(b) - getScore(a));
     }
+    
+    const top6: T[] = [];
+    
+    // First round: Pick highest from each class level (positions 1, 2, 3)
+    for (const level of classLevels) {
+      if (entriesByLevel[level].length >= 1) {
+        top6.push(entriesByLevel[level][0]);
+      }
+    }
+    
+    // Second round: Pick second highest from each class level (positions 4, 5, 6)
+    for (const level of classLevels) {
+      if (entriesByLevel[level].length >= 2) {
+        top6.push(entriesByLevel[level][1]);
+      }
+    }
+    
+    // Fill remaining slots if any class level didn't have enough entries
     if (top6.length < 6) {
       const top6Ids = new Set(top6.map((e: any) => e.id));
       const remaining = sortedEntries.filter((e: any) => !top6Ids.has(e.id));
       top6.push(...remaining.slice(0, 6 - top6.length));
     }
-    return top6.sort((a, b) => getScore(b) - getScore(a)).slice(0, 6);
+    
+    return top6.slice(0, 6);
   };
   const sortedCommunityEntries = [...communityEntries].sort((a, b) => b.vote_count - a.vote_count);
   const communityTop6 = getBalancedTop6(sortedCommunityEntries, e => e.vote_count);
