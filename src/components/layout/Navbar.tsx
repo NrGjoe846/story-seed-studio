@@ -78,7 +78,7 @@ export const Navbar = () => {
     // Show Dashboard only for logged-in users OR admin/judge
     if (isUserRegistered) {
       // Regular user dashboard
-      baseLinks.push({ name: 'Dashboard', path: '/user/dashboard' });
+      baseLinks.push({ name: 'Dashboard', path: '/dashboard' });
     } else if (isAuthenticated && role === 'admin') {
       baseLinks.push({ name: 'Dashboard', path: '/admin/dashboard' });
     } else if (isAuthenticated && role === 'judge') {
@@ -152,7 +152,7 @@ export const Navbar = () => {
       case 'judge':
         return '/judge/dashboard';
       default:
-        return '/user/dashboard';
+        return '/dashboard';
     }
   };
 
