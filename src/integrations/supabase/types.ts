@@ -282,6 +282,7 @@ export type Database = {
           second_runner_up_id: string | null
           start_date: string | null
           updated_at: string | null
+          voting_open: boolean | null
           winner_id: string | null
         }
         Insert: {
@@ -302,6 +303,7 @@ export type Database = {
           second_runner_up_id?: string | null
           start_date?: string | null
           updated_at?: string | null
+          voting_open?: boolean | null
           winner_id?: string | null
         }
         Update: {
@@ -322,6 +324,7 @@ export type Database = {
           second_runner_up_id?: string | null
           start_date?: string | null
           updated_at?: string | null
+          voting_open?: boolean | null
           winner_id?: string | null
         }
         Relationships: [
