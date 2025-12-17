@@ -33,6 +33,22 @@ const Voting = () => {
   const { eventId } = useParams<{ eventId?: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check if user is logged in
+  useEffect(() => {
+    const storedPhone = localStorage.getItem('story_seed_user_phone');
+    const storedEmail = localStorage.getItem('story_seed_user_email');
+    const isLoggedIn = (!!storedPhone && storedPhone.length >= 10) || (!!storedEmail && storedEmail.length > 0);
+    
+    if (!isLoggedIn) {
+      toast({
+        title: 'Login Required',
+        description: 'Please login to vote.',
+        variant: 'destructive',
+      });
+      navigate('/user');
+    }
+  }, [navigate, toast]);
   
   const [contestants, setContestants] = useState<Contestant[]>([]);
   const [judgeTop6Ids, setJudgeTop6Ids] = useState<Set<string>>(new Set());

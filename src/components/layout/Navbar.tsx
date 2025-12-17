@@ -43,18 +43,22 @@ export const Navbar = () => {
     setHoveredPath(location.pathname);
   }, [location.pathname]);
 
-  // Check if user has registered (phone number stored)
+  // Check if user is logged in (phone or email stored)
   useEffect(() => {
-    const checkUserRegistration = () => {
+    const checkUserLogin = () => {
       const storedPhone = localStorage.getItem('story_seed_user_phone');
-      setIsUserRegistered(!!storedPhone && storedPhone.length >= 10);
+      const storedEmail = localStorage.getItem('story_seed_user_email');
+      setIsUserRegistered(
+        (!!storedPhone && storedPhone.length >= 10) || 
+        (!!storedEmail && storedEmail.length > 0)
+      );
     };
 
-    checkUserRegistration();
+    checkUserLogin();
 
     // Listen for storage changes (when user registers or logs out)
     const handleStorageChange = () => {
-      checkUserRegistration();
+      checkUserLogin();
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -75,9 +79,14 @@ export const Navbar = () => {
       { name: 'Leaderboard', path: '/leaderboard' },
     ];
 
-    // Show Dashboard only for registered users OR admin/judge
-    if (isUserRegistered || (isAuthenticated && (role === 'admin' || role === 'judge'))) {
-      baseLinks.push({ name: 'Dashboard', path: '/dashboard' });
+    // Show Dashboard only for logged-in users OR admin/judge
+    if (isUserRegistered) {
+      // Regular user dashboard
+      baseLinks.push({ name: 'Dashboard', path: '/user/dashboard' });
+    } else if (isAuthenticated && role === 'admin') {
+      baseLinks.push({ name: 'Dashboard', path: '/admin/dashboard' });
+    } else if (isAuthenticated && role === 'judge') {
+      baseLinks.push({ name: 'Dashboard', path: '/judge/dashboard' });
     }
 
     baseLinks.push({ name: 'Contact', path: '/contact' });
@@ -127,10 +136,13 @@ export const Navbar = () => {
   }, [location]);
 
   const handleLogout = async () => {
-    // Clear user registration data
+    // Clear all user session data
     localStorage.removeItem('story_seed_user_phone');
     localStorage.removeItem('story_seed_user_name');
     localStorage.removeItem('story_seed_user_id');
+    localStorage.removeItem('story_seed_user_email');
+    localStorage.removeItem('story_seed_user_role');
+    localStorage.removeItem('story_seed_session_id');
     setIsUserRegistered(false);
     await logout();
     navigate('/');

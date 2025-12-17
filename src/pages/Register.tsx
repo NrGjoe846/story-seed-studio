@@ -73,6 +73,24 @@ const getSessionId = (): string => {
 const Register = () => {
   const [searchParams] = useSearchParams();
   const eventIdFromUrl = searchParams.get('eventId');
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Check if user is logged in
+  useEffect(() => {
+    const storedPhone = localStorage.getItem('story_seed_user_phone');
+    const storedEmail = localStorage.getItem('story_seed_user_email');
+    const isLoggedIn = (!!storedPhone && storedPhone.length >= 10) || (!!storedEmail && storedEmail.length > 0);
+    
+    if (!isLoggedIn) {
+      toast({
+        title: 'Login Required',
+        description: 'Please login to register for an event.',
+        variant: 'destructive',
+      });
+      navigate('/user');
+    }
+  }, [navigate, toast]);
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isComplete, setIsComplete] = useState(false);
@@ -94,9 +112,6 @@ const Register = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'initializing' | 'uploading' | 'processing' | 'complete' | 'error'>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
-
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
   // Verification States
 
