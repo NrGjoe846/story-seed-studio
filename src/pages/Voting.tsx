@@ -582,6 +582,12 @@ const Voting = () => {
     }
   }, [contestants]);
 
+  // Check if URL is a YouTube URL
+  const isYouTubeUrl = (url: string | null): boolean => {
+    if (!url) return false;
+    return url.includes('youtube.com') || url.includes('youtu.be');
+  };
+
   // Get YouTube embed URL
   const getYouTubeEmbedUrl = (url: string | null): string | null => {
     if (!url) return null;
@@ -825,12 +831,21 @@ const Voting = () => {
               {/* Video Player */}
               <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
                 {selectedContestant.yt_link ? (
-                  <iframe
-                    src={getYouTubeEmbedUrl(selectedContestant.yt_link) || ''}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                  isYouTubeUrl(selectedContestant.yt_link) ? (
+                    <iframe
+                      src={getYouTubeEmbedUrl(selectedContestant.yt_link) || ''}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video
+                      src={selectedContestant.yt_link}
+                      className="w-full h-full object-contain"
+                      controls
+                      autoPlay={false}
+                    />
+                  )
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">

@@ -23,6 +23,7 @@ import {
   Image,
   X,
   GraduationCap,
+  Video,
 } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
@@ -65,6 +66,7 @@ const adminNavItems: NavItem[] = [
   { name: 'Manage Judges', path: '/admin/dashboard/judges', icon: UserCog },
   { name: 'Manage Users', path: '/admin/dashboard/users', icon: Users },
   { name: 'Voting Outcomes', path: '/admin/dashboard/outcomes', icon: BarChart3 },
+  { name: 'Video Management', path: '/admin/dashboard/videos', icon: Video },
   { name: 'Notifications', path: '/admin/dashboard/notifications', icon: Bell },
   { name: 'Gallery', path: '/admin/dashboard/gallery', icon: Image },
   { name: 'Settings', path: '/admin/dashboard/settings', icon: Settings },

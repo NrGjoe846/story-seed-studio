@@ -227,6 +227,10 @@ const JudgeSubmissions = () => {
     };
   }, [selectedParticipant]);
 
+  const isYouTubeUrl = (url: string) => {
+    return url.includes('youtube.com') || url.includes('youtu.be');
+  };
+
   const getVideoEmbedUrl = (url: string) => {
     if (!url) return '';
     const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/);
@@ -350,7 +354,7 @@ const JudgeSubmissions = () => {
               {/* Video Section */}
               <div className="relative w-full bg-black rounded-xl overflow-hidden aspect-video">
                 {selectedParticipant.videoUrl ? (
-                  selectedParticipant.videoUrl.includes('youtube') || selectedParticipant.videoUrl.includes('youtu.be') ? (
+                  isYouTubeUrl(selectedParticipant.videoUrl) ? (
                     <iframe
                       src={getVideoEmbedUrl(selectedParticipant.videoUrl)}
                       className="w-full h-full"
@@ -363,6 +367,7 @@ const JudgeSubmissions = () => {
                         ref={videoRef}
                         src={selectedParticipant.videoUrl}
                         className="w-full h-full object-contain"
+                        controls
                       />
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                         <div className="mb-3">

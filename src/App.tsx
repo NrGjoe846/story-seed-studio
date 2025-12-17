@@ -48,6 +48,7 @@ import AdminNotifications from "./pages/dashboard/AdminNotifications";
 import AdminSettings from "./pages/dashboard/AdminSettings";
 import AdminGallery from "./pages/dashboard/AdminGallery";
 import AdminProfile from "./pages/dashboard/AdminProfile";
+import AdminVideoManagement from "./pages/dashboard/AdminVideoManagement";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="outcomes" element={<AdminOutcomes />} />
               <Route path="notifications" element={<AdminNotifications />} />
               <Route path="gallery" element={<AdminGallery />} />
+              <Route path="videos" element={<AdminVideoManagement />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="profile" element={<AdminProfile />} />
             </Route>
