@@ -47,7 +47,7 @@ export const EventsSection = () => {
           const now = new Date();
           const start = event.start_date ? new Date(event.start_date) : null;
           const end = event.end_date ? new Date(event.end_date) : null;
-          
+
           let status: 'live' | 'upcoming' | 'ended' = 'upcoming';
           if (start && now < start) status = 'upcoming';
           else if (end && now > end) status = 'ended';
@@ -194,7 +194,7 @@ export const EventsSection = () => {
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                    
+
                     {/* Status Badge */}
                     <div className="absolute top-4 left-4">
                       <span
@@ -203,8 +203,8 @@ export const EventsSection = () => {
                           event.status === 'live'
                             ? 'bg-red-500/90 text-white pulse-live'
                             : event.status === 'upcoming'
-                            ? 'bg-blue-500/90 text-white'
-                            : 'bg-gray-500/90 text-white'
+                              ? 'bg-blue-500/90 text-white'
+                              : 'bg-gray-500/90 text-white'
                         )}
                       >
                         {event.status === 'live' ? '🔴 Live Now' : event.status === 'upcoming' ? 'Coming Soon' : 'Ended'}
@@ -248,7 +248,7 @@ export const EventsSection = () => {
                         </Button>
                       )}
                       <Link to={`/voting/${event.id}`} className="flex-1">
-                        <Button variant="outline" className="w-full group/btn border-primary/30 hover:bg-primary/10">
+                        <Button variant="outline" className="w-full group/btn bg-white text-primary hover:bg-primary hover:text-white border-2 border-primary transition-all duration-300">
                           <Vote className="w-4 h-4 mr-2" />
                           Vote
                         </Button>
@@ -264,9 +264,9 @@ export const EventsSection = () => {
         {/* View All */}
         <div className="text-center mt-12">
           <Link to="/events">
-            <Button variant="hero" size="lg">
+            <Button variant="outline" size="lg" className="bg-white text-primary hover:bg-primary hover:text-white border-2 border-primary transition-all duration-300">
               View All Events
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </Link>
         </div>
