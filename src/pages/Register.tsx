@@ -73,11 +73,6 @@ const getSessionId = (): string => {
 const Register = () => {
   const [searchParams] = useSearchParams();
   const eventIdFromUrl = searchParams.get('eventId');
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // Registration is open to everyone - no login required
-  // Email verification happens during the registration flow itself
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isComplete, setIsComplete] = useState(false);
@@ -99,6 +94,9 @@ const Register = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'initializing' | 'uploading' | 'processing' | 'complete' | 'error'>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Verification States
 
@@ -235,7 +233,6 @@ const Register = () => {
         setPersonalInfo(prev => ({ ...prev, email: session.user.email || '' }));
         localStorage.setItem('story_seed_user_email', session.user.email || '');
         localStorage.setItem('story_seed_user_id', session.user.id);
-        localStorage.setItem('story_seed_verified', 'true');
 
         // Determine which step to show based on role (will be updated when events load)
         const savedRole = localStorage.getItem('story_seed_user_role');
@@ -265,11 +262,10 @@ const Register = () => {
         setPersonalInfo(prev => ({ ...prev, email: session.user.email || '' }));
         localStorage.setItem('story_seed_user_email', session.user.email || '');
         localStorage.setItem('story_seed_user_id', session.user.id);
-        localStorage.setItem('story_seed_verified', 'true');
 
         // Don't auto-navigate here, let the user click Continue
         if (event === 'SIGNED_IN') {
-          toast({ title: 'Email Verified! ✓', description: 'Click Continue to proceed.' });
+          toast({ title: 'Email Verified! ✓', description: 'Click Continue to proceed.', variant: 'success' });
         }
       } else if (event === 'SIGNED_OUT') {
         setVerificationEmail('');
@@ -281,6 +277,25 @@ const Register = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Warn user before leaving page if form is not complete
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isComplete && currentStep > 1) {
+        e.preventDefault();
+        e.returnValue = '';
+        // Show warning toast (won't be visible during page unload, but good for consistency)
+        toast({
+          title: 'Leaving Page',
+          description: 'Your inputs were not saved.',
+          variant: 'warning'
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isComplete, currentStep]);
 
   // Send Magic Link Email
   const handleSendMagicLink = async () => {
@@ -306,6 +321,7 @@ const Register = () => {
       toast({
         title: 'Magic Link Sent',
         description: 'Check your inbox and click the link to verify your email.',
+        variant: 'success'
       });
       setEmailStep('sent');
     } catch (error: any) {
@@ -338,7 +354,7 @@ const Register = () => {
       toast({ title: 'Missing information', description: 'Please fill in all personal information fields.', variant: 'destructive' });
       return false;
     }
-    
+
     // Validate age range for school events (5-18)
     const ageNum = parseInt(age);
     if (role === 'school') {
@@ -393,61 +409,175 @@ const Register = () => {
     return true;
   };
 
-  // Upload video to Supabase Storage
-  const uploadVideoToSupabase = async (videoFile: File, registrationId: string): Promise<string | null> => {
+  // Upload video directly to YouTube
+  const uploadVideoToYouTube = async (videoFile: File, registrationId: string): Promise<string | null> => {
     try {
       setUploadStatus('initializing');
       setUploadProgress(0);
       setUploadError(null);
 
-      const fileExt = videoFile.name.split('.').pop() || 'mp4';
-      const fileName = `${registrationId}-${Date.now()}.${fileExt}`;
+      const videoTitle = `${storyDetails.title} - ${personalInfo.firstName} ${personalInfo.lastName}`;
+      const videoDescription = `Story submission by ${personalInfo.firstName} ${personalInfo.lastName}\n\nCategory: ${storyDetails.category}\nClass Level: ${storyDetails.classLevel}\n\n${storyDetails.description}`;
 
+      // Step 1: Initialize upload session
+      console.log('Initializing YouTube upload session...');
+      const initResponse = await supabase.functions.invoke('youtube-upload-init', {
+        body: {
+          title: videoTitle,
+          description: videoDescription,
+          registrationId,
+          fileName: videoFile.name,
+          fileSize: videoFile.size,
+          mimeType: videoFile.type,
+        },
+      });
+
+      if (initResponse.error || !initResponse.data?.uploadUri) {
+        console.error('Failed to initialize upload:', initResponse.error || initResponse.data);
+        throw new Error(initResponse.data?.error || 'Failed to initialize YouTube upload');
+      }
+
+      const uploadUri: string = initResponse.data.uploadUri;
+      console.log('Upload URI obtained');
+
+      // Step 2: Upload video directly to YouTube
       setUploadStatus('uploading');
 
-      // Upload to Supabase Storage with progress tracking
-      const { error: uploadError } = await supabase.storage
-        .from('story-videos')
-        .upload(fileName, videoFile, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      const totalSize = videoFile.size;
+      const chunkSize = 8 * 1024 * 1024; // 8MB
 
-      // Simulate progress since Supabase doesn't provide progress callbacks
-      setUploadProgress(50);
+      const parseVideoId = (raw: string | null | undefined): string | null => {
+        if (!raw) return null;
+        try {
+          const json = JSON.parse(raw);
+          return typeof json?.id === 'string' ? json.id : null;
+        } catch {
+          return null;
+        }
+      };
 
-      if (uploadError) {
-        console.error('Supabase storage upload error:', uploadError);
-        throw new Error(uploadError.message || 'Failed to upload video');
-      }
+      return await new Promise<string>((resolve, reject) => {
+        const finishFromProbe = () => {
+          const probe = new XMLHttpRequest();
+          probe.responseType = 'text';
+          probe.onload = () => {
+            if (probe.status === 200 || probe.status === 201) {
+              const videoId = parseVideoId(probe.responseText);
+              if (!videoId) {
+                console.error('Probe did not return a video ID:', probe.responseText);
+                reject(new Error('Upload finished but could not confirm video ID'));
+                return;
+              }
+              resolve(`https://youtu.be/${videoId}`);
+              return;
+            }
+            console.error('YouTube probe failed:', probe.status, probe.responseText);
+            reject(new Error(`Upload finished but confirmation failed (status ${probe.status})`));
+          };
+          probe.onerror = () => {
+            reject(new Error('Network error while confirming upload'));
+          };
+          probe.open('PUT', uploadUri);
+          // Query upload status (no body)
+          probe.setRequestHeader('Content-Range', `bytes */${totalSize}`);
+          probe.send(null);
+        };
 
-      setUploadProgress(80);
+        const uploadChunk = (startByte: number) => {
+          const endByte = Math.min(startByte + chunkSize, totalSize) - 1;
+          const chunk = videoFile.slice(startByte, endByte + 1);
 
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('story-videos')
-        .getPublicUrl(fileName);
+          const xhr = new XMLHttpRequest();
+          xhr.responseType = 'text';
 
-      const videoUrl = publicUrlData.publicUrl;
-      console.log('Video uploaded successfully:', videoUrl);
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const overallLoaded = startByte + event.loaded;
+              const progress = Math.min(99, Math.round((overallLoaded / totalSize) * 100));
+              setUploadProgress(progress);
+            }
+          };
 
-      // Update registration with video URL
-      setUploadStatus('processing');
-      const { error: updateError } = await supabase
-        .from('registrations')
-        .update({ yt_link: videoUrl })
-        .eq('id', registrationId);
+          xhr.onload = async () => {
+            // 200/201: upload complete with a video resource JSON body
+            if (xhr.status === 200 || xhr.status === 201) {
+              const videoId = parseVideoId(xhr.responseText);
+              if (!videoId) {
+                console.error('YouTube did not return a video ID:', xhr.responseText);
+                reject(new Error('Upload finished but could not confirm video ID'));
+                return;
+              }
 
-      if (updateError) {
-        console.error('Failed to update registration with video URL:', updateError);
-        // Don't fail - video is uploaded, just log the error
-      }
+              console.log('Video uploaded successfully, ID:', videoId);
 
-      setUploadStatus('complete');
-      setUploadProgress(100);
-      return videoUrl;
+              // Step 3: Save YouTube link to database
+              setUploadStatus('processing');
+              const youtubeUrl = `https://youtu.be/${videoId}`;
+
+              const completeResponse = await supabase.functions.invoke('youtube-upload-complete', {
+                body: { videoId, registrationId },
+              });
+
+              if (completeResponse.error) {
+                console.error('Failed to save YouTube link via edge function:', completeResponse.error);
+                // Fallback attempt (may fail due to RLS)
+                const { error: fallbackError } = await supabase
+                  .from('registrations')
+                  .update({ yt_link: youtubeUrl })
+                  .eq('id', registrationId);
+
+                if (fallbackError) {
+                  console.error('Fallback yt_link update failed:', fallbackError);
+                }
+              }
+
+              setUploadStatus('complete');
+              setUploadProgress(100);
+              resolve(youtubeUrl);
+              return;
+            }
+
+            // 308: resumable upload incomplete; continue from server-reported range
+            if (xhr.status === 308) {
+              const range = xhr.getResponseHeader('Range');
+              // Range is typically like: "bytes=0-1048575"
+              const match = range?.match(/bytes=\d+-(\d+)/);
+              const nextStart = match ? parseInt(match[1], 10) + 1 : endByte + 1;
+
+              // If YouTube reports it has received the whole file but still returns 308,
+              // do a final status probe to get the video resource / ID.
+              if (nextStart >= totalSize) {
+                setUploadStatus('processing');
+                finishFromProbe();
+                return;
+              }
+
+              const progress = Math.min(99, Math.round((nextStart / totalSize) * 100));
+              setUploadProgress(progress);
+
+              uploadChunk(nextStart);
+              return;
+            }
+
+            console.error('YouTube upload failed:', xhr.status, xhr.responseText);
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          };
+
+          xhr.onerror = () => {
+            console.error('Network error during upload');
+            reject(new Error('Network error during upload'));
+          };
+
+          xhr.open('PUT', uploadUri);
+          xhr.setRequestHeader('Content-Type', videoFile.type || 'application/octet-stream');
+          xhr.setRequestHeader('Content-Range', `bytes ${startByte}-${endByte}/${totalSize}`);
+          xhr.send(chunk);
+        };
+
+        uploadChunk(0);
+      });
     } catch (error) {
-      console.error('Video upload error:', error);
+      console.error('YouTube upload error:', error);
       setUploadStatus('error');
       setUploadError(error instanceof Error ? error.message : 'Upload failed');
       return null;
@@ -574,7 +704,7 @@ const Register = () => {
             return false;
           }
           registrationId = existing.id;
-          toast({ title: 'Saved Registration Found', description: 'Retrying YouTube upload for your existing registration...' });
+          toast({ title: 'Saved Registration Found', description: 'Retrying YouTube upload for your existing registration...', variant: 'warning' });
         }
 
         if (!registrationId) {
@@ -612,11 +742,11 @@ const Register = () => {
           return false;
         }
 
-        toast({ title: 'Uploading Video', description: 'Please wait while your video is being uploaded...' });
+        toast({ title: 'Uploading Video', description: 'Please wait while your video is uploaded to YouTube...', variant: 'warning' });
 
-        const videoUrl = await uploadVideoToSupabase(storyDetails.videoFile, registrationId);
+        const youtubeUrl = await uploadVideoToYouTube(storyDetails.videoFile, registrationId);
 
-        if (!videoUrl) {
+        if (!youtubeUrl) {
           toast({
             title: 'Video Upload Failed',
             description: 'Your registration was saved, but the video upload did not complete. Please try again.',
@@ -625,8 +755,8 @@ const Register = () => {
           return false;
         }
 
-        console.log('Video uploaded successfully:', videoUrl);
-        toast({ title: 'Video Uploaded!', description: 'Your video has been uploaded successfully.' });
+        console.log('Video uploaded successfully:', youtubeUrl);
+        toast({ title: 'Video Uploaded!', description: 'Your video has been uploaded successfully.', variant: 'success' });
       }
 
       saveUserSession(personalInfo.email, personalInfo.firstName, authenticatedUserId);
@@ -641,12 +771,21 @@ const Register = () => {
   };
 
   const handleNext = async () => {
+    // Scroll to top smoothly for mobile users
+    const scrollToTop = () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    };
+
     if (currentStep === 1) {
       if (!validateStep1()) return;
 
       // Check if role was already auto-set (for single-type events from URL)
       if (role) {
         setCurrentStep(3);
+        scrollToTop();
         return;
       }
 
@@ -655,12 +794,15 @@ const Register = () => {
       if (event?.event_type === 'school') {
         setRole('school');
         setCurrentStep(3);
+        scrollToTop();
       } else if (event?.event_type === 'college') {
         setRole('college');
         setCurrentStep(3);
+        scrollToTop();
       } else {
         // For 'both' events or no event selected yet, show role selection
         setCurrentStep(2);
+        scrollToTop();
       }
       return;
     }
@@ -668,12 +810,14 @@ const Register = () => {
     if (currentStep === 2) {
       if (!validateStep2()) return;
       setCurrentStep(3);
+      scrollToTop();
       return;
     }
 
     if (currentStep === 3) {
       if (!validateStep3()) return;
       setCurrentStep(4);
+      scrollToTop();
       return;
     }
 
@@ -684,6 +828,7 @@ const Register = () => {
       } else {
         setCurrentStep(5); // Go to Review for free (Step 5)
       }
+      scrollToTop();
       return;
     }
 
@@ -701,13 +846,14 @@ const Register = () => {
           }
         }
         setCurrentStep(6); // Go to Review
+        scrollToTop();
         return;
       }
       // Functionally submit if Free
       const success = await submitRegistration();
       if (success) {
         setIsComplete(true);
-        toast({ title: 'Registration Successful! 🎉', description: 'Your story has been submitted successfully.' });
+        toast({ title: 'Registration Successful! 🎉', description: 'Your story has been submitted successfully.', variant: 'success' });
       }
     }
 
@@ -715,13 +861,26 @@ const Register = () => {
       const success = await submitRegistration();
       if (success) {
         setIsComplete(true);
-        toast({ title: 'Registration Successful! 🎉', description: 'Your story has been submitted successfully.' });
+        toast({ title: 'Registration Successful! 🎉', description: 'Your story has been submitted successfully.', variant: 'success' });
       }
     }
   };
 
   const handlePrev = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+      // Show warning about unsaved data
+      toast({
+        title: 'Going Back',
+        description: 'Your inputs were not saved.',
+        variant: 'warning'
+      });
+      // Scroll to top smoothly when going back
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
   };
 
 
@@ -1210,7 +1369,7 @@ const Register = () => {
                       )}
                     </div>
                     <div className="w-full bg-secondary rounded-full h-2">
-                      <div 
+                      <div
                         className={cn(
                           "h-2 rounded-full transition-all duration-300",
                           uploadStatus === 'error' ? "bg-destructive" : "bg-primary"
