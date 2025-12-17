@@ -827,11 +827,19 @@ const Register = () => {
                         variant="hero"
                         className="w-full"
                         onClick={() => {
-                          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                          if (isMobile) {
-                            window.location.href = 'mailto:';
+                          const userAgent = navigator.userAgent.toLowerCase();
+                          const isAndroid = /android/i.test(userAgent);
+                          const isIOS = /iphone|ipad|ipod/i.test(userAgent);
+                          
+                          if (isAndroid) {
+                            // Try to open Gmail app inbox on Android
+                            window.location.href = 'googlegmail://';
+                          } else if (isIOS) {
+                            // Open default Mail app on iOS
+                            window.location.href = 'message://';
                           } else {
-                            window.open('https://mail.google.com', '_blank');
+                            // Desktop - open Gmail inbox
+                            window.open('https://mail.google.com/mail/u/0/#inbox', '_blank');
                           }
                         }}
                       >
