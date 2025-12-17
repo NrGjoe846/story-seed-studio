@@ -120,15 +120,11 @@ const Leaderboard = () => {
         // Get all votes from votes table
         const { data: votes } = await supabase.from('votes').select('registration_id, user_id, score');
 
-        // Get judge user IDs
-        const { data: userRoles } = await supabase
-          .from('user_roles')
-          .select('user_id, role');
+        // Get judge user IDs using security definer function (works for non-authenticated users)
+        const { data: judgeUserData } = await supabase.rpc('get_judge_user_ids');
 
         const judgeUserIds = new Set(
-          (userRoles || [])
-            .filter(ur => ur.role === 'judge')
-            .map(ur => ur.user_id)
+          (judgeUserData || []).map((row: { user_id: string }) => row.user_id)
         );
 
         // Calculate judge scores per registration
