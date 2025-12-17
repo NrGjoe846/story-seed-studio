@@ -64,7 +64,7 @@ const Leaderboard = () => {
       if (!selectedEvent) return;
 
       const currentEvent = events.find(e => e.id === selectedEvent);
-      const isCollegeEvent = currentEvent?.event_type === 'college' || currentEvent?.event_type === 'both';
+      const isCollegeEvent = currentEvent?.event_type === 'college';
 
       if (isCollegeEvent) {
         // Fetch from clg_registrations for college events
@@ -117,22 +117,35 @@ const Leaderboard = () => {
 
         const registrations = registrationsData as any[];
 
-        // Get judge votes from votes table
+        // Get all votes from votes table
         const { data: votes } = await supabase.from('votes').select('registration_id, user_id, score');
 
-        // Process judge votes
-        const scoreData: Record<string, { total: number; count: number }> = {};
+        // Get judge user IDs
+        const { data: userRoles } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+
+        const judgeUserIds = new Set(
+          (userRoles || [])
+            .filter(ur => ur.role === 'judge')
+            .map(ur => ur.user_id)
+        );
+
+        // Calculate judge scores per registration
+        const judgeScoreData: Record<string, { total: number; count: number }> = {};
         (votes || []).forEach(vote => {
-          if (!scoreData[vote.registration_id]) {
-            scoreData[vote.registration_id] = { total: 0, count: 0 };
+          if (judgeUserIds.has(vote.user_id)) {
+            if (!judgeScoreData[vote.registration_id]) {
+              judgeScoreData[vote.registration_id] = { total: 0, count: 0 };
+            }
+            judgeScoreData[vote.registration_id].total += vote.score;
+            judgeScoreData[vote.registration_id].count += 1;
           }
-          scoreData[vote.registration_id].total += vote.score;
-          scoreData[vote.registration_id].count += 1;
         });
 
-        // Judge leaderboard uses average scores from votes table
+        // Judge leaderboard uses average scores from judge votes
         const judgeEntriesWithScores = (registrations || []).map(reg => {
-          const data = scoreData[reg.id];
+          const data = judgeScoreData[reg.id];
           return {
             ...reg,
             average_score: data ? parseFloat((data.total / data.count).toFixed(1)) : 0,
@@ -168,6 +181,7 @@ const Leaderboard = () => {
         const eligibleForCommunityVotingIds = remainingAfterJudgeTop6.slice(0, 45).map(e => e.id);
 
         // Community leaderboard: only from eligible pool, sorted by overall_votes
+        // Apply balanced 2 per class level for community leaderboard display
         const communityEntriesWithVotes = (registrations || [])
           .filter(reg => eligibleForCommunityVotingIds.includes(reg.id))
           .map(reg => ({

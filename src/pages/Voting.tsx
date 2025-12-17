@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ThumbsUp, Eye, X, Share2, Play, Loader2, User, Phone, Search, ArrowLeft, Copy, Check, MessageCircle, Instagram, Facebook } from 'lucide-react';
+import { ThumbsUp, Eye, X, Share2, Play, Loader2, User, Phone, Search, ArrowLeft, Copy, Check, MessageCircle, Instagram, Facebook, Mail, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,8 +34,12 @@ const Voting = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Voting is open to everyone - no login required
-  // Voter details (name/phone) are collected during the voting process
+  // Email verification states
+  const [isVerified, setIsVerified] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [emailStep, setEmailStep] = useState<'email' | 'sent' | 'verified'>('email');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   
   const [contestants, setContestants] = useState<Contestant[]>([]);
   const [judgeTop6Ids, setJudgeTop6Ids] = useState<Set<string>>(new Set());
@@ -52,12 +56,143 @@ const Voting = () => {
   const [checkingVote, setCheckingVote] = useState(false);
   const [hasRecordedView, setHasRecordedView] = useState(false);
   const [votingOpen, setVotingOpen] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   // Store IDs of participants that should be shown (excluding judge top 6)
   const [eligibleForVotingIds, setEligibleForVotingIds] = useState<Set<string>>(new Set());
 
+  // Check if user is already verified
+  useEffect(() => {
+    const checkVerification = async () => {
+      setCheckingAuth(true);
+      
+      // Check localStorage first
+      const storedVerified = localStorage.getItem('story_seed_verified') === 'true';
+      const storedEmail = localStorage.getItem('story_seed_user_email');
+      const storedName = localStorage.getItem('story_seed_user_name');
+      
+      if (storedVerified && storedEmail) {
+        setIsVerified(true);
+        setEmailStep('verified');
+        setVerificationEmail(storedEmail);
+        if (storedName) setVoterName(storedName);
+        setCheckingAuth(false);
+        return;
+      }
+      
+      // Check Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        setIsVerified(true);
+        setEmailStep('verified');
+        setVerificationEmail(session.user.email);
+        localStorage.setItem('story_seed_verified', 'true');
+        localStorage.setItem('story_seed_user_email', session.user.email);
+        localStorage.setItem('story_seed_user_id', session.user.id);
+        
+        // Try to get name from registrations
+        const { data: registration } = await supabase
+          .from('registrations')
+          .select('first_name')
+          .eq('email', session.user.email)
+          .limit(1)
+          .maybeSingle();
+        
+        if (registration?.first_name) {
+          setVoterName(registration.first_name);
+          localStorage.setItem('story_seed_user_name', registration.first_name);
+        }
+      }
+      
+      setCheckingAuth(false);
+    };
+    
+    checkVerification();
+    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user?.email) {
+        setIsVerified(true);
+        setEmailStep('verified');
+        setVerificationEmail(session.user.email);
+        localStorage.setItem('story_seed_verified', 'true');
+        localStorage.setItem('story_seed_user_email', session.user.email);
+        localStorage.setItem('story_seed_user_id', session.user.id);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Send magic link email
+  const handleSendMagicLink = async () => {
+    if (!verificationEmail.trim()) {
+      toast({
+        title: 'Email Required',
+        description: 'Please enter your email address.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(verificationEmail)) {
+      toast({
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const redirectUrl = `${window.location.origin}/voting/${eventId || ''}`;
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: verificationEmail,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
+      });
+
+      if (error) throw error;
+
+      setEmailStep('sent');
+      toast({
+        title: 'Verification Link Sent!',
+        description: 'Please check your email and click the verification link.',
+      });
+    } catch (error: any) {
+      console.error('Error sending magic link:', error);
+      toast({
+        title: 'Failed to Send',
+        description: error.message || 'Could not send verification email. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  // Open email client
+  const openEmailClient = () => {
+    const emailDomain = verificationEmail.split('@')[1]?.toLowerCase();
+    let emailUrl = 'mailto:';
+    
+    if (emailDomain === 'gmail.com') {
+      emailUrl = 'https://mail.google.com';
+    } else if (emailDomain === 'outlook.com' || emailDomain === 'hotmail.com') {
+      emailUrl = 'https://outlook.live.com';
+    } else if (emailDomain === 'yahoo.com') {
+      emailUrl = 'https://mail.yahoo.com';
+    }
+    
+    window.open(emailUrl, '_blank');
+  };
+
   // Fetch judge rankings and get eligible participants for voting (excluding top 6 winners)
-  const fetchJudgeRankingsForVoting = async (eventIdToFetch: string) => {
+  const fetchJudgeRankingsForVoting = useCallback(async (eventIdToFetch: string) => {
     try {
       // Fetch registrations for this event
       const { data: registrations } = await supabase
@@ -146,13 +281,20 @@ const Voting = () => {
       setEligibleForVotingIds(new Set());
       setJudgeTop6Ids(new Set());
     }
-  };
+  }, []);
 
-  const fetchContestants = async () => {
+  const fetchContestants = useCallback(async (force = false) => {
     if (!eventId) {
       setLoading(false);
       return;
     }
+
+    // Prevent fetching too frequently unless forced
+    const now = Date.now();
+    if (!force && now - lastFetchTime < 1000) {
+      return;
+    }
+    setLastFetchTime(now);
 
     try {
       const { data: eventData, error: eventError } = await supabase
@@ -210,10 +352,11 @@ const Voting = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId, lastFetchTime, fetchJudgeRankingsForVoting]);
 
+  // Initial fetch and real-time subscriptions
   useEffect(() => {
-    fetchContestants();
+    fetchContestants(true);
 
     if (eventId) {
       // Subscribe to registrations changes (for votes/views updates)
@@ -261,7 +404,7 @@ const Voting = () => {
           },
           () => {
             // Refetch to get updated counts
-            fetchContestants();
+            fetchContestants(true);
           }
         )
         .subscribe();
@@ -278,7 +421,7 @@ const Voting = () => {
           },
           () => {
             // Refetch to get updated counts
-            fetchContestants();
+            fetchContestants(true);
           }
         )
         .subscribe();
@@ -298,7 +441,7 @@ const Voting = () => {
             if (payload.new && typeof payload.new === 'object' && 'voting_open' in payload.new) {
               setVotingOpen((payload.new as any).voting_open === true);
               // Refetch to update eligible participants
-              fetchContestants();
+              fetchContestants(true);
             }
           }
         )
@@ -329,7 +472,30 @@ const Voting = () => {
         supabase.removeChannel(votesChannel);
       };
     }
-  }, [eventId]);
+  }, [eventId, fetchContestants, fetchJudgeRankingsForVoting]);
+
+  // Refetch when page becomes visible (handles tab switches and navigation)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && eventId) {
+        fetchContestants(true);
+      }
+    };
+
+    const handleFocus = () => {
+      if (eventId) {
+        fetchContestants(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [eventId, fetchContestants]);
 
   // Check if voter can vote for this contestant (24-hour cooldown)
   const checkCanVote = async (registrationId: string, phone: string): Promise<{ canVote: boolean; reason?: string }> => {
@@ -447,7 +613,6 @@ const Voting = () => {
   const handleContestantClick = async (contestant: Contestant) => {
     setSelectedContestant(contestant);
     setIsModalOpen(true);
-    setVoterName('');
     setVoterPhone('');
     setCanVoteStatus({ canVote: true });
     setHasRecordedView(false);
@@ -544,7 +709,6 @@ const Voting = () => {
       });
 
       setIsModalOpen(false);
-      setVoterName('');
       setVoterPhone('');
       setCanVoteStatus({ canVote: true });
     } catch (error) {
@@ -616,7 +780,6 @@ const Voting = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedContestant(null);
-    setVoterName('');
     setVoterPhone('');
     setCanVoteStatus({ canVote: true });
     setHasRecordedView(false);
@@ -681,13 +844,122 @@ const Voting = () => {
     return url;
   };
 
-  if (loading) {
+  // Loading state
+  if (checkingAuth || loading) {
     return (
       <div className="pt-20 min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading contestants...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Email verification required
+  if (!isVerified) {
+    return (
+      <div className="min-h-screen bg-background page-enter">
+        {/* Header */}
+        <section className="pt-20 pb-8 sm:pb-12 bg-gradient-warm relative overflow-hidden">
+          <div className="absolute inset-0">
+            <div className="absolute top-10 left-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-10 right-10 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
+          </div>
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="text-center">
+              <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-4">
+                Vote for Your <span className="text-gradient">Favorites</span>
+              </h1>
+              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+                Verify your email to start voting for amazing stories
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Email Verification Form */}
+        <section className="py-12 container mx-auto px-4">
+          <div className="max-w-md mx-auto">
+            <div className="bg-card rounded-2xl p-8 border border-border/50 shadow-lg">
+              {emailStep === 'email' && (
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Mail className="w-8 h-8 text-primary" />
+                    </div>
+                    <h2 className="font-display text-2xl font-semibold text-foreground">Verify Your Email</h2>
+                    <p className="text-muted-foreground mt-2">Enter your email to receive a verification link</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Email Address</Label>
+                    <Input
+                      type="email"
+                      placeholder="your@email.com"
+                      value={verificationEmail}
+                      onChange={(e) => setVerificationEmail(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <Button
+                    variant="hero"
+                    onClick={handleSendMagicLink}
+                    disabled={sendingEmail || !verificationEmail.trim()}
+                    className="w-full"
+                  >
+                    {sendingEmail ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Send Verification Link
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {emailStep === 'sent' && (
+                <div className="space-y-6 text-center">
+                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+                    <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-2xl font-semibold text-foreground mb-2">Check Your Email</h2>
+                    <p className="text-muted-foreground">
+                      We've sent a verification link to <span className="font-semibold text-foreground">{verificationEmail}</span>
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={openEmailClient}
+                    className="w-full"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open Email App
+                  </Button>
+
+                  <div className="pt-4 border-t border-border">
+                    <p className="text-sm text-muted-foreground mb-3">Didn't receive the email?</p>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setEmailStep('email')}
+                      className="text-sm"
+                    >
+                      Try a different email
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
@@ -801,6 +1073,11 @@ const Voting = () => {
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Support young storytellers by voting for the stories that inspire you the most
             </p>
+            {isVerified && verificationEmail && (
+              <p className="text-sm text-primary mt-2">
+                Voting as: {verificationEmail}
+              </p>
+            )}
           </div>
         </div>
       </section>
