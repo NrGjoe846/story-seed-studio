@@ -131,18 +131,21 @@ const UserDashboard = () => {
   }, []);
 
   const handleLogout = async () => {
-    // Clear localStorage
+    // Clear all localStorage including verification status
     localStorage.removeItem('story_seed_user_email');
     localStorage.removeItem('story_seed_user_name');
     localStorage.removeItem('story_seed_user_id');
     localStorage.removeItem('story_seed_session_id');
+    localStorage.removeItem('story_seed_user_phone');
+    localStorage.removeItem('story_seed_user_role');
+    localStorage.removeItem('story_seed_verified'); // Reset verification - user must verify again
     
     setIsLoggedIn(false);
     setUserEmail(null);
     setUserName(null);
     
-    toast({ title: 'Logged Out', description: 'You have been logged out successfully. Please register again to access dashboard.' });
-    navigate('/register');
+    toast({ title: 'Logged Out', description: 'You have been logged out successfully. Please verify your email again to access dashboard.' });
+    navigate('/');
   };
 
   if (isLoading) {
