@@ -115,13 +115,11 @@ const Register = () => {
     }
   }, [role]);
 
-  // Email verification states
+  // Google OAuth verification states
   const [verificationEmail, setVerificationEmail] = useState('');
-  const [emailStep, setEmailStep] = useState<'email' | 'sent' | 'verified'>('email');
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [lastMagicLinkRedirectUrl, setLastMagicLinkRedirectUrl] = useState('');
+  const [emailStep, setEmailStep] = useState<'pending' | 'verified'>('pending');
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(null);
-  const [isWaitingForVerification, setIsWaitingForVerification] = useState(false);
 
   const [personalInfo, setPersonalInfo] = useState({
     firstName: '',
@@ -234,55 +232,39 @@ const Register = () => {
     }
   }, [role, selectedEventId, events]);
 
-  // Check for existing session on mount and handle magic link callback
+  // Check for existing Google OAuth session on mount
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user && session.user.email) {
-        // SCENARIO: User is Logged In (e.g. Mobile after clicking link)
         setAuthenticatedUserId(session.user.id);
         setVerificationEmail(session.user.email);
         setEmailStep('verified');
         setPersonalInfo(prev => ({ ...prev, email: session.user.email || '' }));
         localStorage.setItem('story_seed_user_email', session.user.email || '');
         localStorage.setItem('story_seed_user_id', session.user.id);
+        localStorage.setItem('story_seed_verified', 'true');
 
-        // We are on the verifying device, not necessarily the originator
-        // If we just verified via magic link, we want to broadcast
-        const channelEmail = session.user.email.toLowerCase();
-        const channel = supabase.channel(`verification:${channelEmail}`);
+        // Get name from Google account
+        const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name;
+        if (userName) {
+          const firstName = userName.split(' ')[0];
+          setPersonalInfo(prev => ({ ...prev, firstName }));
+          localStorage.setItem('story_seed_user_name', firstName);
+        }
 
-        channel.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await channel.send({
-              type: 'broadcast',
-              event: 'VERIFIED',
-              payload: {
-                userId: session.user.id,
-                email: session.user.email
-              },
-            });
-            setTimeout(() => supabase.removeChannel(channel), 5000);
-          }
-        });
-
-        // Determine which step to show based on role (will be updated when events load)
+        // Determine which step to show based on role
         const savedRole = localStorage.getItem('story_seed_user_role');
         if (savedRole) {
           setCurrentStep(3);
         } else {
-          setCurrentStep(1);
+          setCurrentStep(2);
         }
       } else {
-        // Laptop waiting
         setVerificationEmail('');
-        setEmailStep('email');
+        setEmailStep('pending');
         setCurrentStep(1);
         setAuthenticatedUserId(null);
-        setIsWaitingForVerification(false);
-        localStorage.removeItem('story_seed_user_email');
-        localStorage.removeItem('story_seed_user_name');
-        localStorage.removeItem('story_seed_user_id');
       }
     };
     checkSession();
@@ -295,25 +277,21 @@ const Register = () => {
         setPersonalInfo(prev => ({ ...prev, email: session.user.email || '' }));
         localStorage.setItem('story_seed_user_email', session.user.email || '');
         localStorage.setItem('story_seed_user_id', session.user.id);
+        localStorage.setItem('story_seed_verified', 'true');
 
-        toast({ title: 'Email Verified! ✓', description: 'Click Continue to proceed.', variant: 'success' });
+        // Get name from Google account
+        const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name;
+        if (userName) {
+          const firstName = userName.split(' ')[0];
+          setPersonalInfo(prev => ({ ...prev, firstName }));
+          localStorage.setItem('story_seed_user_name', firstName);
+        }
 
-        // Broadcast
-        const channelEmail = session.user.email.toLowerCase();
-        const channel = supabase.channel(`verification:${channelEmail}`);
-        channel.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await channel.send({
-              type: 'broadcast',
-              event: 'VERIFIED',
-              payload: { userId: session.user.id, email: session.user.email },
-            });
-            setTimeout(() => supabase.removeChannel(channel), 5000);
-          }
-        });
+        toast({ title: 'Signed In! ✓', description: 'Select your role to continue.', variant: 'success' });
+        setCurrentStep(2);
       } else if (event === 'SIGNED_OUT') {
         setVerificationEmail('');
-        setEmailStep('email');
+        setEmailStep('pending');
         setCurrentStep(1);
         setAuthenticatedUserId(null);
       }
@@ -321,49 +299,6 @@ const Register = () => {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  // Listen for Cross-Device Verification (Laptop Logic)
-  useEffect(() => {
-    // Only listen if we sent the link and are waiting
-    if (emailStep === 'sent' && verificationEmail && isWaitingForVerification) {
-      const channelEmail = verificationEmail.toLowerCase();
-      console.log(`Listening for verification on channel: verification:${channelEmail}`);
-      const channel = supabase.channel(`verification:${channelEmail}`);
-
-      channel
-        .on('broadcast', { event: 'VERIFIED' }, (payload) => {
-          if (payload.payload.email.toLowerCase() === channelEmail) {
-            setAuthenticatedUserId(payload.payload.userId);
-            setEmailStep('verified');
-            setPersonalInfo(prev => ({ ...prev, email: payload.payload.email }));
-            localStorage.setItem('story_seed_user_email', payload.payload.email);
-            localStorage.setItem('story_seed_user_id', payload.payload.userId);
-
-            toast({
-              title: 'Verified on Mobile! 📱',
-              description: 'Proceeding to next step...',
-              variant: 'success'
-            });
-
-            // Auto-advance step
-            setTimeout(() => {
-              const savedRole = localStorage.getItem('story_seed_user_role');
-              if (savedRole) {
-                setCurrentStep(3);
-              } else {
-                setCurrentStep(2);
-              }
-              supabase.removeChannel(channel);
-            }, 1000);
-          }
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [emailStep, verificationEmail, isWaitingForVerification, toast]);
 
   // Warn user before leaving page if form is not complete
   useEffect(() => {
@@ -383,39 +318,30 @@ const Register = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isComplete, currentStep]);
 
-  // Send Magic Link Email
-  const handleSendMagicLink = async () => {
-    if (!verificationEmail || !verificationEmail.includes('@')) {
-      toast({ title: 'Invalid Email', description: 'Please enter a valid email address.', variant: 'destructive' });
+  // Handle Google Sign In for registration
+  const handleGoogleSignIn = async () => {
+    if (!selectedEventId) {
+      toast({ title: 'Event Required', description: 'Please select an event first.', variant: 'destructive' });
       return;
     }
-    setSendingEmail(true);
-    setIsWaitingForVerification(true); // Mark as originating device
+    
+    setIsSigningIn(true);
     try {
-      // Use selectedEventId (from URL or dropdown) for redirect
       const eventId = selectedEventId || eventIdFromUrl;
       const redirectUrl = `${window.location.origin}/register${eventId ? `?eventId=${eventId}` : ''}`;
-      setLastMagicLinkRedirectUrl(redirectUrl);
 
-      const { error } = await supabase.auth.signInWithOtp({
-        email: verificationEmail,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-          emailRedirectTo: redirectUrl,
+          redirectTo: redirectUrl,
         },
       });
-      if (error) throw error;
 
-      toast({
-        title: 'Magic Link Sent',
-        description: 'Check your inbox on ANY device to verify.',
-        variant: 'success'
-      });
-      setEmailStep('sent');
+      if (error) throw error;
     } catch (error: any) {
-      console.error('Error sending magic link:', error);
-      toast({ title: 'Failed to Send Email', description: error.message || 'Please try again later.', variant: 'destructive' });
-    } finally {
-      setSendingEmail(false);
+      console.error('Error signing in with Google:', error);
+      toast({ title: 'Sign In Failed', description: error.message || 'Could not sign in with Google. Please try again.', variant: 'destructive' });
+      setIsSigningIn(false);
     }
   };
   const validateStep1 = () => {
@@ -904,19 +830,19 @@ const Register = () => {
           {/* Form Content */}
           <div className="bg-card rounded-2xl p-8 shadow-lg border border-border/50 relative">
 
-            {/* Step 1: Get Started (Email Verification) */}
+            {/* Step 1: Get Started (Google Sign In) */}
             {currentStep === 1 && (
               <div className="space-y-8 animate-fade-in">
                 <div className="text-center">
                   <h2 className="font-display text-2xl font-semibold text-foreground">Get Started</h2>
-                  <p className="text-muted-foreground mt-2">Select your event and verify your email</p>
+                  <p className="text-muted-foreground mt-2">Select your event and sign in with Google</p>
                 </div>
 
-                {/* Email Verification Section */}
+                {/* Google Sign In Section */}
                 <div className="space-y-6">
-                  {emailStep === 'email' && (
+                  {emailStep === 'pending' && (
                     <div className="space-y-4">
-                      {/* Event Selection - Must be selected before sending magic link */}
+                      {/* Event Selection */}
                       {!isEventLocked && (
                         <div className="space-y-2">
                           <Label>Select Event <span className="text-destructive">*</span></Label>
@@ -936,77 +862,54 @@ const Register = () => {
                           </div>
                         </div>
                       )}
-                      <div className="space-y-2">
-                        <Label>Email Address <span className="text-destructive">*</span></Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input type="email" placeholder="Enter your email address" value={verificationEmail} onChange={(e) => setVerificationEmail(e.target.value)} className="pl-10" required />
-                        </div>
+                      
+                      <div className="pt-4">
+                        <Button 
+                          onClick={handleGoogleSignIn} 
+                          disabled={isSigningIn || !selectedEventId} 
+                          className="w-full" 
+                          variant="outline" 
+                          size="lg"
+                        >
+                          {isSigningIn ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Connecting...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                              </svg>
+                              Continue with Google
+                            </>
+                          )}
+                        </Button>
                       </div>
-                      <Button onClick={handleSendMagicLink} disabled={sendingEmail || !verificationEmail.includes('@') || !selectedEventId} className="w-full" variant="hero" size="lg">{sendingEmail ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</> : <>Send Magic Link<ArrowRight className="w-4 h-4 ml-2" /></>}</Button>
                     </div>
                   )}
-                  {emailStep === 'sent' && (
-                    <div className="space-y-4 text-center">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                        <Mail className="w-12 h-12 mx-auto text-blue-600 mb-4" />
-                        <h3 className="font-semibold text-blue-800 mb-2">Check Your Email</h3>
-                        <p className="text-blue-600 text-sm mb-4">We've sent a magic link to <strong>{verificationEmail}</strong></p>
-                        <p className="text-blue-600 text-xs">Click the link in the email to continue your registration.</p>
-                      </div>
-                      <Button
-                        variant="hero"
-                        className="w-full"
-                        onClick={() => {
-                          window.location.href = 'mailto:';
-                        }}
-                      >
-                        <Mail className="w-4 h-4 mr-2" />
-                        Open Mail App
-                      </Button>
-                      <Button variant="ghost" className="w-full" onClick={() => setEmailStep('email')}>Change Email Address</Button>
-                      <Button variant="outline" className="w-full" onClick={handleSendMagicLink} disabled={sendingEmail}>{sendingEmail ? 'Sending...' : 'Resend Magic Link'}</Button>
-                    </div>
-                  )}
+                  
                   {emailStep === 'verified' && (
                     <div className="animate-fade-in">
-                      {isWaitingForVerification ? (
-                        /* Laptop / Originator View */
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-                          <div className="bg-green-100 p-2 rounded-full"><Check className="w-5 h-5 text-green-600" /></div>
-                          <div className="flex-1">
-                            <p className="text-green-800 font-medium">Email Verified</p>
-                            <p className="text-green-600 text-sm">{verificationEmail}</p>
-                          </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+                        <div className="bg-green-100 p-2 rounded-full"><Check className="w-5 h-5 text-green-600" /></div>
+                        <div className="flex-1">
+                          <p className="text-green-800 font-medium">Signed In</p>
+                          <p className="text-green-600 text-sm">{verificationEmail}</p>
                         </div>
-                      ) : (
-                        /* Mobile / Verifier View */
-                        <div className="text-center py-6 space-y-4">
-                          <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-2">
-                            <Check className="w-8 h-8 text-green-600" />
-                          </div>
-                          <h3 className="text-xl font-bold text-foreground">Verified!</h3>
-                          <p className="text-muted-foreground">
-                            Your email has been verified successfully.
-                          </p>
-                          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-4">
-                            <p className="text-blue-700 font-semibold">
-                              Please continue the next step in your Email entered device.
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                      </div>
+                      
+                      <div className="flex justify-end pt-4">
+                        <Button onClick={handleNext} variant="hero" size="lg" className="w-full sm:w-auto">
+                          Continue <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
-
-                {isWaitingForVerification && (
-                  <div className="flex justify-end pt-4">
-                    <Button onClick={handleNext} disabled={emailStep !== 'verified'} variant="hero" size="lg" className="w-full sm:w-auto">
-                      Continue <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
 

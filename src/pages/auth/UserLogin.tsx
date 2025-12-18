@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Phone, ArrowRight, Loader2, ShieldCheck, Check, LogIn } from 'lucide-react';
+import { Loader2, Check, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -12,114 +9,24 @@ const UserLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpStep, setOtpStep] = useState<'phone' | 'otp' | 'verified'>('phone');
-  const [sendingOtp, setSendingOtp] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // User is already logged in, redirect to dashboard
-        navigate('/user/dashboard');
-      }
-    };
-    checkSession();
-  }, [navigate]);
-
-  // Handle phone input
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const digits = value.replace(/\D/g, '');
-    const phoneDigits = digits.startsWith('91') ? digits.slice(2) : digits;
-    if (phoneDigits.length <= 10) {
-      setPhoneNumber(phoneDigits);
-    }
-  };
-
-  // Send OTP using Supabase Phone Auth
-  const handleSendOTP = async () => {
-    const phoneDigits = phoneNumber.replace(/\D/g, '');
-    if (phoneDigits.length !== 10) {
-      toast({
-        title: 'Invalid Phone Number',
-        description: 'Please enter a valid 10-digit phone number.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSendingOtp(true);
-
-    try {
-      const formattedPhone = `+91${phoneDigits}`;
-      
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: 'OTP Sent',
-        description: 'Please check your phone for the verification code.',
-      });
-      setOtpStep('otp');
-    } catch (error: any) {
-      console.error('Error sending OTP:', error);
-      toast({
-        title: 'Failed to Send OTP',
-        description: error.message || 'Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSendingOtp(false);
-    }
-  };
-
-  // Verify OTP using Supabase Phone Auth
-  const handleVerifyOTP = async () => {
-    if (otp.length !== 6) {
-      toast({
-        title: 'Invalid OTP',
-        description: 'Please enter the 6-digit verification code.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setVerifyingOtp(true);
-
-    try {
-      const phoneDigits = phoneNumber.replace(/\D/g, '');
-      const formattedPhone = `+91${phoneDigits}`;
-
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: formattedPhone,
-        token: otp,
-        type: 'sms',
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.user) {
-        // Save session info to localStorage and set verified flag
-        localStorage.setItem('story_seed_user_phone', phoneDigits);
-        localStorage.setItem('story_seed_user_id', data.user.id);
+        // Save verification status
         localStorage.setItem('story_seed_verified', 'true');
+        localStorage.setItem('story_seed_user_email', session.user.email || '');
+        localStorage.setItem('story_seed_user_id', session.user.id);
         
         // Try to get user name from registrations
         const { data: registration } = await supabase
           .from('registrations')
           .select('first_name')
-          .eq('phone', phoneDigits)
+          .eq('email', session.user.email || '')
           .limit(1)
           .maybeSingle();
         
@@ -127,27 +34,58 @@ const UserLogin = () => {
           localStorage.setItem('story_seed_user_name', registration.first_name);
         }
         
-        setOtpStep('verified');
+        setIsVerified(true);
         
+        // Redirect to dashboard
+        setTimeout(() => {
+          navigate('/user/dashboard');
+        }, 1000);
+      }
+    };
+    checkSession();
+
+    // Listen for auth state changes (OAuth callback)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        localStorage.setItem('story_seed_verified', 'true');
+        localStorage.setItem('story_seed_user_email', session.user.email || '');
+        localStorage.setItem('story_seed_user_id', session.user.id);
+        
+        setIsVerified(true);
         toast({
           title: 'Login Successful! ✓',
           description: 'Welcome back!',
         });
 
-        // Redirect to dashboard after short delay
         setTimeout(() => {
           navigate('/user/dashboard');
         }, 1500);
       }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, toast]);
+
+  // Handle Google Sign In
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/user`,
+        },
+      });
+
+      if (error) throw error;
     } catch (error: any) {
-      console.error('Error verifying OTP:', error);
+      console.error('Error signing in with Google:', error);
       toast({
-        title: 'Verification Failed',
-        description: error.message || 'Invalid OTP. Please try again.',
+        title: 'Sign In Failed',
+        description: error.message || 'Could not sign in with Google. Please try again.',
         variant: 'destructive',
       });
-    } finally {
-      setVerifyingOtp(false);
+      setIsLoading(false);
     }
   };
 
@@ -169,111 +107,12 @@ const UserLogin = () => {
                 User Login
               </h1>
               <p className="text-muted-foreground">
-                Sign in with your phone number
+                Sign in with your Google account
               </p>
             </div>
 
-            {/* Phone Input Step */}
-            {otpStep === 'phone' && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Phone Number</Label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
-                      <span className="text-sm font-medium text-muted-foreground">IN+91</span>
-                    </div>
-                    <Input
-                      type="tel"
-                      placeholder="9342745299"
-                      value={phoneNumber}
-                      onChange={handlePhoneChange}
-                      className="pl-16"
-                      maxLength={10}
-                      required
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={handleSendOTP}
-                  disabled={sendingOtp || phoneNumber.length !== 10}
-                  className="w-full"
-                  variant="hero"
-                  size="lg"
-                >
-                  {sendingOtp ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending OTP...
-                    </>
-                  ) : (
-                    <>
-                      Send Verification Code
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* OTP Input Step */}
-            {otpStep === 'otp' && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <Label className="text-center block">Enter 6-digit OTP</Label>
-                  <div className="flex justify-center">
-                    <InputOTP
-                      maxLength={6}
-                      value={otp}
-                      onChange={setOtp}
-                    >
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
-                  <p className="text-sm text-muted-foreground text-center">
-                    Sent to +91 {phoneNumber}
-                  </p>
-                </div>
-                <Button
-                  onClick={handleVerifyOTP}
-                  disabled={verifyingOtp || otp.length !== 6}
-                  className="w-full"
-                  variant="hero"
-                  size="lg"
-                >
-                  {verifyingOtp ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Verifying...
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-4 h-4 mr-2" />
-                      Verify & Login
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => {
-                    setOtpStep('phone');
-                    setOtp('');
-                  }}
-                >
-                  Change Phone Number
-                </Button>
-              </div>
-            )}
-
             {/* Verified Step */}
-            {otpStep === 'verified' && (
+            {isVerified ? (
               <div className="text-center space-y-4">
                 <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
                   <Check className="w-10 h-10 text-green-600" />
@@ -281,6 +120,45 @@ const UserLogin = () => {
                 <h3 className="text-xl font-semibold text-green-600">Login Successful!</h3>
                 <p className="text-muted-foreground">Redirecting to your dashboard...</p>
                 <Loader2 className="w-6 h-6 mx-auto animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <Button
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading}
+                  className="w-full"
+                  variant="outline"
+                  size="lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                        <path
+                          fill="currentColor"
+                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        />
+                        <path
+                          fill="currentColor"
+                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        />
+                        <path
+                          fill="currentColor"
+                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                        />
+                        <path
+                          fill="currentColor"
+                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                        />
+                      </svg>
+                      Continue with Google
+                    </>
+                  )}
+                </Button>
               </div>
             )}
 
