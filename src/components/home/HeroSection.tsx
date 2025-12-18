@@ -62,8 +62,8 @@ export const HeroSection = () => {
   const currentQuote = leaderQuotes[currentSlide];
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-gray-50">
-      {/* Abstract Background - Red Waves matching uploaded image */}
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-cream">
+      {/* Abstract Background - Red to Yellow Gradient Waves */}
       {/* Added top-24 to avoid Navbar overlap */}
       <div className="absolute inset-0 top-24 z-0 pointer-events-none overflow-hidden">
         <svg
@@ -72,27 +72,37 @@ export const HeroSection = () => {
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <defs>
+            <linearGradient id="redYellowGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="hsl(0, 72%, 36%)" />
+              <stop offset="100%" stopColor="hsl(45, 93%, 47%)" />
+            </linearGradient>
+            <linearGradient id="redYellowGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="hsl(45, 93%, 47%)" />
+              <stop offset="100%" stopColor="hsl(0, 72%, 36%)" />
+            </linearGradient>
+          </defs>
           {/* Top Right Curve - Pushed further corner to avoid center/card */}
           <path
             d="M1440 0V450C1300 400 1200 100 1000 0H1440Z"
-            fill="#9B1B1B"
+            fill="url(#redYellowGradient1)"
             opacity="0.9"
           />
           <path
             d="M1440 0V550C1250 500 1100 100 900 0H1440Z"
-            fill="#9B1B1B"
+            fill="url(#redYellowGradient2)"
             opacity="0.5"
           />
 
           {/* Bottom Swoosh - Flattened to stay low */}
           <path
             d="M0 900H1440V650C1100 800 800 750 400 880L0 900Z"
-            fill="#9B1B1B"
+            fill="url(#redYellowGradient2)"
             opacity="0.8"
           />
           <path
             d="M0 900H1440V550C1100 700 700 650 200 900L0 900Z"
-            fill="#9B1B1B"
+            fill="url(#redYellowGradient1)"
             opacity="0.4"
           />
         </svg>
