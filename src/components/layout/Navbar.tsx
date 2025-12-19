@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Search, Calendar, Sparkles } from 'lucide-react';
+import { Menu, X, LogOut, User, Search, Calendar, Sparkles, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,7 @@ export const Navbar = () => {
   const [showResults, setShowResults] = useState(false);
   const [mobileShowResults, setMobileShowResults] = useState(false);
   const [isUserRegistered, setIsUserRegistered] = useState(false);
+  const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -155,6 +157,46 @@ export const Navbar = () => {
         return '/dashboard';
     }
   };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleSigningIn(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('Error signing in with Google:', error);
+      toast({
+        title: 'Sign in failed',
+        description: error.message || 'Could not sign in with Google',
+        variant: 'destructive',
+      });
+      setIsGoogleSigningIn(false);
+    }
+  };
+
+  // Listen for auth state changes to set verification status
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Set verified status in localStorage
+          localStorage.setItem('story_seed_verified', 'true');
+          localStorage.setItem('story_seed_user_email', session.user.email || '');
+          localStorage.setItem('story_seed_user_id', session.user.id);
+          localStorage.setItem('story_seed_user_name', session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '');
+          setIsUserRegistered(true);
+          setIsGoogleSigningIn(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Filter events based on search query
   const filteredEvents = events.filter(event =>
@@ -389,12 +431,19 @@ export const Navbar = () => {
                     </Button>
                   </>
                 ) : (
-                  <Link to="/user" className="block">
-                    <Button variant="default" className="w-full">
+                  <Button 
+                    variant="default" 
+                    className="w-full"
+                    onClick={handleGoogleSignIn}
+                    disabled={isGoogleSigningIn}
+                  >
+                    {isGoogleSigningIn ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
                       <User className="w-4 h-4 mr-2" />
-                      User Login
-                    </Button>
-                  </Link>
+                    )}
+                    {isGoogleSigningIn ? 'Signing in...' : 'Sign in with Google'}
+                  </Button>
                 )}
               </div>
             </div>
