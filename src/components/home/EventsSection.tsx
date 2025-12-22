@@ -121,33 +121,14 @@ export const EventsSection = () => {
   return (
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
-        {/* Header with Google Ad Placeholders */}
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-4 mb-12">
-          {/* Left Ad Placeholder */}
-          <div className="w-full max-w-[300px] lg:w-48 h-64 lg:h-48 bg-muted/50 border-2 border-dashed border-border rounded-lg flex items-center justify-center mx-auto lg:mx-0">
-            <div className="text-center text-muted-foreground text-xs">
-              <p>Google Ad</p>
-              <p className="text-[10px] mt-1">Responsive</p>
-            </div>
-          </div>
-
-          {/* Header Content */}
-          <div className="text-center space-y-4 flex-1 order-first lg:order-none">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground">
-              Upcoming <span className="text-gradient">Events</span>
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Don't miss out on these exciting storytelling competitions and events
-            </p>
-          </div>
-
-          {/* Right Ad Placeholder */}
-          <div className="w-full max-w-[300px] lg:w-48 h-64 lg:h-48 bg-muted/50 border-2 border-dashed border-border rounded-lg flex items-center justify-center mx-auto lg:mx-0">
-            <div className="text-center text-muted-foreground text-xs">
-              <p>Google Ad</p>
-              <p className="text-[10px] mt-1">Responsive</p>
-            </div>
-          </div>
+        {/* Header Content */}
+        <div className="text-center space-y-4 mb-12">
+          <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground">
+            Upcoming <span className="text-gradient">Events</span>
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Don't miss out on these exciting storytelling competitions and events
+          </p>
         </div>
 
         {/* Category Tabs */}

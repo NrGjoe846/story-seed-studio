@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Sparkles, Bell, Loader2 } from 'lucide-react';
-import GoogleAdPlaceholder from '../common/GoogleAdPlaceholder';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -54,8 +53,8 @@ export const NewsletterSection = () => {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="container mx-auto px-4 relative z-10 flex flex-col lg:flex-row items-center justify-center lg:gap-16 gap-8">
-        <div className="max-w-2xl text-center space-y-8 flex-1">
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-2xl mx-auto text-center space-y-8">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-foreground/10 rounded-full">
             <Bell className="w-4 h-4 text-secondary" />
             <span className="text-sm font-medium">Stay Updated</span>
@@ -103,11 +102,6 @@ export const NewsletterSection = () => {
               )}
             </button>
           </form>
-        </div>
-
-        {/* Ad Placeholder - Right side on desktop */}
-        <div className="w-full max-w-[200px] lg:w-auto shrink-0">
-          <GoogleAdPlaceholder className="lg:w-48 lg:h-64 h-48 w-full mx-auto" />
         </div>
       </div>
     </section>

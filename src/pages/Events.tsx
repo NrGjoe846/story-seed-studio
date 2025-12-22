@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import GoogleAdPlaceholder from '@/components/common/GoogleAdPlaceholder';
 
 interface Event {
   id: string;
@@ -151,19 +150,9 @@ const Events = () => {
       {/* Events Grid */}
       <section className="py-12 sm:py-20 bg-background">
         <div className="container mx-auto px-4">
-          {/* Filters & Ads Container */}
-          <div className="flex flex-col xl:flex-row items-center justify-between gap-6 mb-12">
-            {/* Desktop Left Ad */}
-            <div className="hidden xl:block shrink-0">
-              <GoogleAdPlaceholder className="w-[300px] h-[250px]" />
-            </div>
-
-            {/* Mobile Top Ad */}
-            <div className="xl:hidden w-full max-w-[300px] shrink-0">
-              <GoogleAdPlaceholder className="w-full h-[150px]" />
-            </div>
-
-            <div className="flex-1 flex flex-col items-center w-full">
+          {/* Filters Container */}
+          <div className="flex flex-col items-center justify-center gap-6 mb-12">
+            <div className="flex-1 flex flex-col items-center w-full max-w-3xl">
               {/* Event Type Toggle */}
               <div className="flex justify-center mb-6">
                 <div className="inline-flex p-1.5 bg-card border border-border rounded-full shadow-sm">
@@ -223,16 +212,6 @@ const Events = () => {
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Mobile Bottom Ad */}
-            <div className="xl:hidden w-full max-w-[300px] shrink-0">
-              <GoogleAdPlaceholder className="w-full h-[150px]" />
-            </div>
-
-            {/* Desktop Right Ad */}
-            <div className="hidden xl:block shrink-0">
-              <GoogleAdPlaceholder className="w-[300px] h-[250px]" />
             </div>
           </div>
 

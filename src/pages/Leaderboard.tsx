@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import GoogleAdPlaceholder from '@/components/common/GoogleAdPlaceholder';
 interface CommunityEntry {
   id: string;
   story_title: string;
@@ -498,7 +497,7 @@ const Leaderboard = () => {
     </section>
 
     <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
-      <div className="flex flex-col lg:flex-row items-center justify-center gap-6 mb-8">
+      <div className="flex justify-center mb-8">
         <div className="group flex items-center gap-2 bg-card rounded-full px-4 py-2 border border-border shadow-sm shrink-0 transition-all duration-300 hover:shadow-[0_0_20px_rgba(155,27,27,0.3)] hover:border-[#9B1B1B]/50 hover:bg-red-50/10 focus-within:shadow-[0_0_25px_rgba(155,27,27,0.5)] focus-within:border-[#9B1B1B]">
           <Calendar className="w-4 h-4 text-muted-foreground transition-colors group-hover:text-[#9B1B1B] group-focus-within:text-[#9B1B1B]" />
           <Select value={selectedEvent} onValueChange={(value) => {
@@ -514,12 +513,6 @@ const Leaderboard = () => {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Horizontal Ad Placeholder */}
-        <GoogleAdPlaceholder
-          variant="horizontal"
-          className="w-full max-w-[468px] h-[60px] lg:h-[60px] border-dashed"
-        />
       </div>
 
       {loading ? <div className="flex items-center justify-center h-64">

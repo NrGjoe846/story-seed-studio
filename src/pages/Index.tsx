@@ -1,5 +1,6 @@
 import { HeroSection } from '@/components/home/HeroSection';
 import { EventsSection } from '@/components/home/EventsSection';
+import { HowItWorksSection } from '@/components/home/HowItWorksSection';
 import { PartnersSection } from '@/components/home/PartnersSection';
 import { NewsletterSection } from '@/components/home/NewsletterSection';
 
@@ -8,6 +9,7 @@ const Index = () => {
     <div className="page-enter">
       <HeroSection />
       <EventsSection />
+      <HowItWorksSection />
       <PartnersSection />
       <NewsletterSection />
     </div>
