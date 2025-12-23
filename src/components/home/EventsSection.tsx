@@ -140,7 +140,7 @@ export const EventsSection = () => {
               className={cn(
                 'px-6 py-3 rounded-full font-medium text-sm transition-all duration-300',
                 activeCategory === category
-                  ? 'bg-primary text-primary-foreground shadow-glow'
+                  ? 'bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] text-white shadow-lg'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               )}
             >
@@ -218,7 +218,7 @@ export const EventsSection = () => {
                     <div className="flex flex-col sm:flex-row gap-3 pt-4">
                       {event.registration_open ? (
                         <Link to={`/register?eventId=${event.id}`} className="flex-1">
-                          <Button variant="hero" className="w-full group/btn">
+                          <Button variant="hero" className="w-full group/btn bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90">
                             Register Now
                             <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
                           </Button>
@@ -229,7 +229,7 @@ export const EventsSection = () => {
                         </Button>
                       )}
                       <Link to={`/voting/${event.id}`} className="flex-1">
-                        <Button variant="outline" className="w-full group/btn bg-white text-primary hover:bg-primary hover:text-white border-2 border-primary transition-all duration-300">
+                        <Button variant="outline" className="w-full group/btn bg-white text-[#9B1B1B] hover:bg-[#9B1B1B] hover:text-white border-2 border-[#9B1B1B] transition-all duration-300 font-semibold">
                           <Vote className="w-4 h-4 mr-2" />
                           Vote
                         </Button>
@@ -245,7 +245,7 @@ export const EventsSection = () => {
         {/* View All */}
         <div className="text-center mt-12">
           <Link to="/events">
-            <Button variant="outline" size="lg" className="bg-white text-primary hover:bg-primary hover:text-white border-2 border-primary transition-all duration-300">
+            <Button variant="outline" size="lg" className="bg-white text-[#9B1B1B] hover:bg-[#9B1B1B] hover:text-white border-2 border-[#9B1B1B] transition-all duration-300 font-semibold">
               View All Events
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>

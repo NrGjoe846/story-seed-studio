@@ -106,16 +106,22 @@ const About = () => {
   return (
     <div className="page-enter">
       {/* Hero Section with Gradient */}
-      <section className="py-16 sm:py-20 bg-gradient-to-br from-primary via-primary to-primary/80 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] [background-size:20px_20px]" />
+      <section className="relative py-16 sm:py-24 bg-gradient-to-br from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] overflow-hidden">
+        {/* Decorative Pattern Overlay */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.15)_1px,transparent_0)] [background-size:40px_40px]"></div>
         </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 left-10 w-40 h-40 bg-[#D4AF37]/20 rounded-full blur-3xl"></div>
+
         <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center space-y-4">
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-primary-foreground">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white drop-shadow-lg">
               About Us
             </h1>
-            <p className="text-base sm:text-lg text-primary-foreground/90 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto drop-shadow-md">
               Read more about us. Our vision, mission, success and many other things you might love.
             </p>
           </div>
@@ -302,17 +308,17 @@ const About = () => {
       </section>
 
       {/* Team Section */}
-      <section className="py-12 sm:py-16 bg-primary relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] [background-size:20px_20px]" />
+      <section className="py-12 sm:py-16 bg-gradient-to-br from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.15)_1px,transparent_0)] [background-size:40px_40px]" />
         </div>
         <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-8 sm:mb-10">
-              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-foreground mb-3">
+              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 drop-shadow-lg">
                 Let's Meet Our Team
               </h2>
-              <p className="text-sm sm:text-base text-primary-foreground/80 max-w-2xl mx-auto">
+              <p className="text-sm sm:text-base text-white/90 max-w-2xl mx-auto drop-shadow-md">
                 Our team consists only of the best talents
               </p>
             </div>
@@ -360,7 +366,7 @@ const About = () => {
               </div>
               <div className="flex justify-center md:col-span-2">
                 <Link to="/events">
-                  <Button variant="hero" size="lg" className="w-full sm:w-auto">
+                  <Button variant="hero" size="lg" className="w-full sm:w-auto bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90">
                     Get Started
                   </Button>
                 </Link>

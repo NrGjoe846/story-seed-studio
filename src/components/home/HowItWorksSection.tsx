@@ -68,7 +68,7 @@ export const HowItWorksSection = () => {
                                         {/* Left side - Number and Line */}
                                         <div className="flex flex-col items-center">
                                             {/* Number Badge */}
-                                            <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shadow-glow border-4 border-background shrink-0">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] flex items-center justify-center text-white font-bold text-sm shadow-lg border-4 border-background shrink-0">
                                                 {step.number}
                                             </div>
 
@@ -118,7 +118,7 @@ export const HowItWorksSection = () => {
                                 >
                                     {/* Step Number Badge */}
                                     <div className="flex justify-center mb-4">
-                                        <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-base shadow-glow border-4 border-background">
+                                        <div className="w-14 h-14 rounded-full bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] flex items-center justify-center text-white font-bold text-base shadow-lg border-4 border-background">
                                             {step.number}
                                         </div>
                                     </div>
@@ -159,7 +159,7 @@ export const HowItWorksSection = () => {
                                 >
                                     {/* Step Number Badge */}
                                     <div className="flex justify-center mb-5">
-                                        <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-base shadow-glow border-4 border-background">
+                                        <div className="w-14 h-14 rounded-full bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] flex items-center justify-center text-white font-bold text-base shadow-lg border-4 border-background">
                                             {step.number}
                                         </div>
                                     </div>
@@ -206,7 +206,7 @@ export const HowItWorksSection = () => {
                                         {/* Step Number Badge */}
                                         <div className="flex justify-center mb-6">
                                             <div className="relative">
-                                                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg shadow-glow border-4 border-background z-10 relative">
+                                                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] flex items-center justify-center text-white font-bold text-lg shadow-lg border-4 border-background z-10 relative">
                                                     {step.number}
                                                 </div>
                                                 {/* Connecting dot */}

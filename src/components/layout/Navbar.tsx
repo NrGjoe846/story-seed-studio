@@ -270,7 +270,7 @@ export const Navbar = () => {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center group">
-              <div className="h-10 sm:h-12 px-2 sm:px-4 py-1 bg-[#9B1B1B] rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 shadow-md overflow-hidden">
+              <div className="h-10 sm:h-12 px-2 sm:px-4 py-1 bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 shadow-md overflow-hidden">
                 <img
                   src="/assets/logo.png"
                   alt="Story Seed Studio"
@@ -280,7 +280,7 @@ export const Navbar = () => {
             </Link>
 
             {/* Desktop Navigation - Floating Pill Style */}
-            <div className="hidden lg:flex items-center p-1.5 rounded-full bg-[#9B1B1B] border border-white/10 shadow-sm ml-8">
+            <div className="hidden lg:flex items-center p-1.5 rounded-full bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] border border-white/10 shadow-sm ml-8">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
                 return (
@@ -431,8 +431,8 @@ export const Navbar = () => {
                     </Button>
                   </>
                 ) : (
-                  <Button 
-                    variant="default" 
+                  <Button
+                    variant="default"
                     className="w-full"
                     onClick={handleGoogleSignIn}
                     disabled={isGoogleSigningIn}

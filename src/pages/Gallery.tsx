@@ -79,7 +79,7 @@ const Gallery = () => {
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-charcoal/90 via-charcoal/50 to-transparent" />
-            
+
             {/* Back Button */}
             <button
               onClick={handleBack}
@@ -169,16 +169,22 @@ const Gallery = () => {
   // Gallery grid view
   return (
     <div className="page-enter">
-      {/* Hero */}
-      <section className="py-16 bg-gradient-to-br from-primary via-primary to-primary/80 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] [background-size:20px_20px]"></div>
+      {/* Hero Banner */}
+      <section className="relative py-16 sm:py-24 bg-gradient-to-br from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] overflow-hidden">
+        {/* Decorative Pattern Overlay */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.15)_1px,transparent_0)] [background-size:40px_40px]"></div>
         </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 left-10 w-40 h-40 bg-[#D4AF37]/20 rounded-full blur-3xl"></div>
+
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-primary-foreground mb-4">
-            Our <span className="text-primary-foreground">Gallery</span>
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 drop-shadow-lg">
+            Our <span className="text-[#D4AF37]">Gallery</span>
           </h1>
-          <p className="text-primary-foreground/90 text-lg max-w-2xl mx-auto">
+          <p className="text-white/90 text-lg md:text-xl max-w-2xl mx-auto drop-shadow-md">
             Explore moments from our events, celebrate our star performers, and relive the magic of storytelling
           </p>
         </div>
@@ -195,7 +201,7 @@ const Gallery = () => {
                 className={cn(
                   'px-6 py-2.5 rounded-full font-medium text-sm transition-all duration-300',
                   activeCategory === category
-                    ? 'bg-primary text-primary-foreground shadow-glow'
+                    ? 'bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] text-white shadow-lg'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 )}
               >
@@ -235,7 +241,7 @@ const Gallery = () => {
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-charcoal/90 via-charcoal/40 to-transparent" />
-                    
+
                     {/* Featured Badge */}
                     {item.featured && (
                       <div className="absolute top-4 left-4 z-10">

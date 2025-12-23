@@ -2,22 +2,22 @@ import React from 'react';
 import styled from 'styled-components';
 
 interface AnimatedBlobCardProps {
-    children?: React.ReactNode;
-    className?: string;
+  children?: React.ReactNode;
+  className?: string;
 }
 
 const AnimatedBlobCard: React.FC<AnimatedBlobCardProps> = ({ children, className }) => {
-    return (
-        <StyledWrapper className={className}>
-            <div className="card">
-                <div className="bg">
-                    {children}
-                </div>
-                <div className="blob" />
-                <div className="blob" />
-            </div>
-        </StyledWrapper>
-    );
+  return (
+    <StyledWrapper className={className}>
+      <div className="card">
+        <div className="bg">
+          {children}
+        </div>
+        <div className="blob" />
+        <div className="blob" />
+      </div>
+    </StyledWrapper>
+  );
 }
 
 const StyledWrapper = styled.div`
@@ -65,19 +65,22 @@ const StyledWrapper = styled.div`
     width: 150px;
     height: 150px;
     border-radius: 50%;
-    background-color: #b31515ff;
-    opacity: 1;
+    background: linear-gradient(135deg, #ff8c42 0%, #ffb347 50%, #ffd89b 100%);
+    opacity: 0.6;
     animation: blob-bounce 5s infinite linear;
     /* Center the blob on its coordinate */
     transform: translate(-50%, -50%);
+    filter: blur(3px);
   }
 
   .blob:nth-child(2) {
     animation-delay: -1.25s; /* Starts at 25% (Top-Right) */
+    background: linear-gradient(135deg, #ffb347 0%, #ffd89b 50%, #ff8c42 100%);
   }
 
   .blob:nth-child(3) {
     animation-delay: -3.75s; /* Starts at 75% (Bottom-Left) */
+    background: linear-gradient(135deg, #ffd89b 0%, #ff8c42 50%, #ffb347 100%);
   }
 
   @keyframes blob-bounce {

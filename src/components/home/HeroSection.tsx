@@ -63,37 +63,42 @@ export const HeroSection = () => {
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-gray-50">
-      {/* Abstract Background - Red Waves matching uploaded image */}
-      {/* Added top-24 to avoid Navbar overlap */}
-      <div className="absolute inset-0 top-24 z-0 pointer-events-none overflow-hidden">
+      {/* Gradient Background - Matching header gradient (Red to Orange to Gold) */}
+      {/* Extended to cover full section including top navigation area */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to right, hsl(0, 72%, 36%) 0%, hsl(20, 90%, 55%) 50%, hsl(45, 100%, 51%) 100%)',
+            opacity: 0.15
+          }}
+        />
+
         <svg
           className="absolute w-full h-full"
           viewBox="0 0 1440 900"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Top Right Curve - Pushed further corner to avoid center/card */}
+          <defs>
+            <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{ stopColor: '#9e1a1a', stopOpacity: 0.6 }} />
+              <stop offset="50%" style={{ stopColor: '#F57C00', stopOpacity: 0.5 }} />
+              <stop offset="100%" style={{ stopColor: '#FFC107', stopOpacity: 0.6 }} />
+            </linearGradient>
+          </defs>
+
+          {/* Top Right Curve */}
           <path
             d="M1440 0V450C1300 400 1200 100 1000 0H1440Z"
-            fill="#9B1B1B"
-            opacity="0.9"
-          />
-          <path
-            d="M1440 0V550C1250 500 1100 100 900 0H1440Z"
-            fill="#9B1B1B"
-            opacity="0.5"
+            fill="url(#heroGradient)"
           />
 
-          {/* Bottom Swoosh - Flattened to stay low */}
+          {/* Bottom Swoosh */}
           <path
             d="M0 900H1440V650C1100 800 800 750 400 880L0 900Z"
-            fill="#9B1B1B"
-            opacity="0.8"
-          />
-          <path
-            d="M0 900H1440V550C1100 700 700 650 200 900L0 900Z"
-            fill="#9B1B1B"
-            opacity="0.4"
+            fill="url(#heroGradient)"
           />
         </svg>
       </div>

@@ -466,11 +466,11 @@ const Leaderboard = () => {
       </div>}
     </div>;
   };
-  return <div className="page-enter min-h-screen bg-background">
+  return <div className="page-enter min-h-screen bg-background -mt-px">
     {/* Compact Header */}
-    <section className="py-8 md:py-12 bg-gradient-to-br from-primary via-primary to-primary/80 relative overflow-hidden">
+    <section className="pt-20 pb-8 md:pt-24 md:pb-12 bg-gradient-hero relative overflow-hidden">
       <div className="absolute inset-0 opacity-20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] [background-size:20px_20px]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(212,175,55,0.15)_1px,transparent_0)] [background-size:20px_20px]"></div>
       </div>
       {/* Left Trophy - Bottom Aligned */}
       <div className="absolute left-[8%] sm:left-[15%] md:left-[20%] lg:left-[25%] xl:left-[28%] bottom-5 z-20">
@@ -522,14 +522,14 @@ const Leaderboard = () => {
           <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50 p-1">
             <TabsTrigger
               value="community"
-              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              className="flex items-center gap-2 data-[state=active]:bg-gradient-hero data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
             >
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Community</span>
             </TabsTrigger>
             <TabsTrigger
               value="judge"
-              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              className="flex items-center gap-2 data-[state=active]:bg-gradient-hero data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
             >
               <Gavel className="w-4 h-4" />
               <span className="hidden sm:inline">Judge</span>

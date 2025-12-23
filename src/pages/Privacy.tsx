@@ -5,7 +5,7 @@ const Privacy = () => {
     <div className="page-enter">
       <section className="pt-0 pb-0 bg-gradient-to-br from-primary via-primary to-primary/80 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] [background-size:20px_20px]"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(212,175,55,0.15)_1px,transparent_0)] [background-size:20px_20px]"></div>
         </div>
         <div className="container mx-auto px-4 min-h-[200px] flex flex-col items-center justify-center text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-foreground/20 rounded-full mb-4">

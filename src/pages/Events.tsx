@@ -132,16 +132,22 @@ const Events = () => {
 
   return (
     <div className="page-enter">
-      {/* Hero */}
-      <section className="py-12 sm:py-16 bg-gradient-to-br from-primary via-primary to-primary/80 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] [background-size:20px_20px]"></div>
+      {/* Hero Banner */}
+      <section className="relative py-16 sm:py-24 bg-gradient-to-br from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] overflow-hidden">
+        {/* Decorative Pattern Overlay */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.15)_1px,transparent_0)] [background-size:40px_40px]"></div>
         </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 left-10 w-40 h-40 bg-[#D4AF37]/20 rounded-full blur-3xl"></div>
+
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-primary-foreground mb-4">
-            All <span className="text-primary-foreground">Events</span>
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 drop-shadow-lg">
+            All <span className="text-[#D4AF37]">Events</span>
           </h1>
-          <p className="text-primary-foreground/90 text-lg max-w-2xl mx-auto">
+          <p className="text-white/90 text-lg md:text-xl max-w-2xl mx-auto drop-shadow-md">
             Discover all our exciting storytelling competitions and events. Register now to participate!
           </p>
         </div>
@@ -161,7 +167,7 @@ const Events = () => {
                     className={cn(
                       'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300',
                       eventTypeFilter === 'all'
-                        ? 'bg-primary text-primary-foreground shadow-md'
+                        ? 'bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] text-white shadow-lg'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     )}
                   >
@@ -172,7 +178,7 @@ const Events = () => {
                     className={cn(
                       'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2',
                       eventTypeFilter === 'school'
-                        ? 'bg-primary text-primary-foreground shadow-md'
+                        ? 'bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] text-white shadow-lg'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     )}
                   >
@@ -184,7 +190,7 @@ const Events = () => {
                     className={cn(
                       'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2',
                       eventTypeFilter === 'college'
-                        ? 'bg-primary text-primary-foreground shadow-md'
+                        ? 'bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] text-white shadow-lg'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     )}
                   >
@@ -203,7 +209,7 @@ const Events = () => {
                     className={cn(
                       'px-6 py-3 rounded-full font-medium text-sm transition-all duration-300',
                       activeCategory === category
-                        ? 'bg-primary text-primary-foreground shadow-glow'
+                        ? 'bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] text-white shadow-lg'
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
                     )}
                   >
@@ -292,7 +298,7 @@ const Events = () => {
                       <div className="flex flex-col sm:flex-row gap-3 pt-4">
                         {event.registration_open ? (
                           <Link to={`/register?eventId=${event.id}`} className="flex-1">
-                            <Button variant="hero" className="w-full group/btn">
+                            <Button variant="hero" className="w-full group/btn bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90">
                               Register Now
                               <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
                             </Button>
@@ -305,7 +311,7 @@ const Events = () => {
                         {/* Only show Vote button for school events */}
                         {event.event_type === 'school' && (
                           <Link to={`/voting/${event.id}`} className="flex-1">
-                            <Button variant="outline" className="w-full group/btn bg-white text-primary hover:bg-primary hover:text-white border-2 border-primary transition-all duration-300">
+                            <Button variant="outline" className="w-full group/btn bg-white text-[#9B1B1B] hover:bg-[#9B1B1B] hover:text-white border-2 border-[#9B1B1B] transition-all duration-300 font-semibold">
                               <Vote className="w-4 h-4 mr-2" />
                               Vote
                             </Button>
