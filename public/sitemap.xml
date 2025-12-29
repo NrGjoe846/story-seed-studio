@@ -6,7 +6,7 @@
   <!-- Homepage -->
   <url>
     <loc>https://storyseed.in/</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -20,7 +20,7 @@
   <!-- About Page -->
   <url>
     <loc>https://storyseed.in/about</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -28,20 +28,15 @@
   <!-- Events/Competitions Page -->
   <url>
     <loc>https://storyseed.in/events</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.95</priority>
-    <image:image>
-      <image:loc>https://storyseed.in/assets/champion-trophy.png</image:loc>
-      <image:title>Story Competition Trophy</image:title>
-      <image:caption>Win trophies and awards in Story Seed storytelling competitions</image:caption>
-    </image:image>
   </url>
   
   <!-- Registration Page -->
   <url>
     <loc>https://storyseed.in/register</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.95</priority>
   </url>
@@ -49,7 +44,7 @@
   <!-- Voting Page -->
   <url>
     <loc>https://storyseed.in/voting</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -57,7 +52,7 @@
   <!-- Leaderboard Page -->
   <url>
     <loc>https://storyseed.in/leaderboard</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -65,7 +60,7 @@
   <!-- Gallery Page -->
   <url>
     <loc>https://storyseed.in/gallery</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -73,7 +68,7 @@
   <!-- FAQ Page -->
   <url>
     <loc>https://storyseed.in/faq</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -81,23 +76,15 @@
   <!-- Contact Page -->
   <url>
     <loc>https://storyseed.in/contact</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   
   <!-- User Login Page -->
   <url>
-    <loc>https://storyseed.in/auth/login</loc>
-    <lastmod>2025-01-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <!-- User Signup Page -->
-  <url>
-    <loc>https://storyseed.in/auth/signup</loc>
-    <lastmod>2025-01-01</lastmod>
+    <loc>https://storyseed.in/user</loc>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -105,7 +92,7 @@
   <!-- Terms of Service -->
   <url>
     <loc>https://storyseed.in/terms</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
@@ -113,7 +100,7 @@
   <!-- Privacy Policy -->
   <url>
     <loc>https://storyseed.in/privacy</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2025-12-29</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
