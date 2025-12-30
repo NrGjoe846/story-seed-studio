@@ -4,6 +4,7 @@ import { Play, Mic, Sparkles, Shield, Heart, Award, Globe, Users, Target, BookOp
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CircularTestimonials } from '@/components/ui/circular-testimonials';
+import logoImage from '@/assets/logo.png';
 
 const About = () => {
   const [activeTab, setActiveTab] = useState<'mission' | 'vision' | 'values'>('mission');
@@ -55,46 +56,55 @@ const About = () => {
       name: 'Sandhiya',
       role: 'Chief Operating Officer',
       image: '/team/new-member1.jpg',
+      description: 'Keeps everything running smoothly. Makes sure all work is done on time. Helps the team work together well.',
     },
     {
       name: 'Nehemiah Nesanathan',
       role: 'Chief Technical Officer',
       image: '/team/new-member2.jpg',
+      description: 'Turns ideas into working technology. Builds smart solutions for everyone. Makes innovation happen every day.',
     },
     {
       name: 'Einya',
       role: 'Chief Financial Officer',
       image: '/team/new-member3.jpg',
+      description: 'Manages money carefully. Helps the company grow safely. Uses resources in the best way.',
     },
     {
       name: 'Kishore',
-      role: 'Production manager',
+      role: 'Event Manager ',
       image: '/team/new-member4.jpg',
+      description: 'Plans every event perfectly. Makes events fun and memorable. Ensures everything goes as planned.',
     },
     {
       name: 'Anjali Patel',
-      role: 'HR',
+      role: 'Chief Human Resources Officer',
       image: '/team/new-member5.jpg',
+      description: 'Helps people do their best work. Builds a happy and strong team. Makes the workplace better for everyone.',
     },
     {
       name: 'Akash Kumar Singh',
       role: 'Developer',
       image: '/team/new-member6.jpg',
+      description: 'Turns ideas into real tools. Builds technology that works for everyone. Creates solutions that make life easier.',
     },
     {
       name: 'Madhan Kumar',
       role: 'Developer',
       image: '/team/new-member7.jpg',
+      description: 'Turns ideas into real tools. Builds technology that works for everyone. Creates solutions that make life easier.',
     },
     {
       name: 'Kamlesh',
       role: 'Developer',
       image: '/team/new-member8.jpg',
+      description: 'Turns ideas into real tools. Builds technology that works for everyone. Creates solutions that make life easier.',
     },
     {
       name: 'Mohammed Tanveer',
       role: 'Developer',
       image: '/team/new-member9.jpg',
+      description: 'Turns ideas into real tools. Builds technology that works for everyone. Creates solutions that make life easier.',
     },
   ];
 
@@ -232,7 +242,7 @@ const About = () => {
               {!isVideoPlaying ? (
                 <>
                   <img
-                    src="public/assets/logo.png"
+                    src={logoImage}
                     alt="Video thumbnail"
                     className="w-full h-full object-cover"
                   />
@@ -321,7 +331,7 @@ const About = () => {
             <div className="flex justify-center items-center">
               <CircularTestimonials
                 testimonials={team.map(member => ({
-                  quote: "Dedicated to nurturing creativity and storytelling in every child.",
+                  quote: member.description,
                   name: member.name,
                   designation: member.role,
                   src: member.image
