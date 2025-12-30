@@ -52,54 +52,49 @@ const About = () => {
 
   const team = [
     {
-      name: 'Vetha Gokul',
-      role: 'Managing Director',
-      image: '/team/member3.jpg',
-    },
-    {
       name: 'Sandhiya',
-      role: 'Chief Executive Officer',
-      image: '/team/member4.jpg',
+      role: 'Chief Operating Officer',
+      image: '/team/new-member1.jpg',
     },
     {
       name: 'Nehemiah Nesanathan',
       role: 'Chief Technical Officer',
-      image: '/team/member5.jpg',
+      image: '/team/new-member2.jpg',
     },
     {
       name: 'Einya',
       role: 'Chief Financial Officer',
-      image: '/team/member9.jpg',
+      image: '/team/new-member3.jpg',
     },
     {
       name: 'Kishore',
-      role: 'Product Manager',
-      image: '/team/member1.jpg',
+      role: 'Production manager',
+      image: '/team/new-member4.jpg',
     },
     {
       name: 'Anjali Patel',
-      role: 'HR Manager',
-      image: '/team/member7.jpg',
+      role: 'HR',
+      image: '/team/new-member5.jpg',
     },
     {
       name: 'Akash Kumar Singh',
       role: 'Developer',
-      image: '/team/member6.jpg',
+      image: '/team/new-member6.jpg',
     },
     {
       name: 'Madhan Kumar',
       role: 'Developer',
-      image: '/team/member8.jpg',
+      image: '/team/new-member7.jpg',
     },
     {
       name: 'Kamlesh',
       role: 'Developer',
-      image: '/team/member10.jpg',
+      image: '/team/new-member8.jpg',
     },
     {
       name: 'Mohammed Tanveer',
-      role: 'Graphic Designer',
-      image: '/team/member2.jpg',
+      role: 'Developer',
+      image: '/team/new-member9.jpg',
     },
   ];
 
@@ -237,7 +232,7 @@ const About = () => {
               {!isVideoPlaying ? (
                 <>
                   <img
-                    src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&h=675&fit=crop"
+                    src="public/assets/logo.png"
                     alt="Video thumbnail"
                     className="w-full h-full object-cover"
                   />
@@ -260,7 +255,7 @@ const About = () => {
                   onEnded={() => setIsVideoPlaying(false)}
                 >
                   <source
-                    src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                    src="/ss.mp4"
                     type="video/mp4"
                   />
                   Your browser does not support the video tag.
