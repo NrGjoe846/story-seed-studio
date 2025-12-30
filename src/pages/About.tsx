@@ -52,54 +52,54 @@ const About = () => {
 
   const team = [
     {
-      name: 'Sarah Johnson',
-      role: 'Founder & CEO',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
+      name: 'Vetha Gokul',
+      role: 'Managing Director',
+      image: '/team/member3.jpg',
     },
     {
-      name: 'Michael Chen',
-      role: 'Creative Director',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
+      name: 'Sandhiya',
+      role: 'Chief Executive Officer',
+      image: '/team/member4.jpg',
     },
     {
-      name: 'Jessica Williams',
-      role: 'Head of Content',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop',
+      name: 'Nehemiah Nesanathan',
+      role: 'Chief Technical Officer',
+      image: '/team/member5.jpg',
     },
     {
-      name: 'David Wilson',
-      role: 'Lead Developer',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
+      name: 'Einya',
+      role: 'Chief Financial Officer',
+      image: '/team/member9.jpg',
     },
     {
-      name: 'Emily Brown',
-      role: 'UX Designer',
-      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop',
+      name: 'Kishore',
+      role: 'Product Manager',
+      image: '/team/member1.jpg',
     },
     {
-      name: 'James Taylor',
-      role: 'Marketing Manager',
-      image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop',
+      name: 'Anjali Patel',
+      role: 'HR Manager',
+      image: '/team/member7.jpg',
     },
     {
-      name: 'Linda Martinez',
-      role: 'Content Writer',
-      image: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&h=400&fit=crop',
+      name: 'Akash Kumar Singh',
+      role: 'Developer',
+      image: '/team/member6.jpg',
     },
     {
-      name: 'Robert Anderson',
-      role: 'Community Manager',
-      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop',
+      name: 'Madhan Kumar',
+      role: 'Developer',
+      image: '/team/member8.jpg',
     },
     {
-      name: 'Patricia Thomas',
-      role: 'Product Owner',
-      image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
+      name: 'Kamlesh',
+      role: 'Developer',
+      image: '/team/member10.jpg',
     },
     {
-      name: 'Christopher Garcia',
-      role: 'Education Specialist',
-      image: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=400&h=400&fit=crop',
+      name: 'Mohammed Tanveer',
+      role: 'Graphic Designer',
+      image: '/team/member2.jpg',
     },
   ];
 
@@ -137,7 +137,7 @@ const About = () => {
               <div className="space-y-5 sm:space-y-6 flex flex-col items-center">
                 <div className="relative aspect-square w-full max-w-[420px] rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary/20 to-secondary/20">
                   <img
-                    src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=600&fit=crop"
+                    src="/about-hero.jpg"
                     alt="Story Seeds"
                     className="w-full h-full object-cover"
                   />
