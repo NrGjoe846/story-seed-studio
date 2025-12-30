@@ -115,7 +115,7 @@ export const Footer = () => {
             <li className="flex items-start gap-2 sm:gap-3">
               <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary mt-0.5 flex-shrink-0" />
               <span className="text-primary-foreground/70 text-xs sm:text-sm">
-                123 Story Lane, Creative Hub, Mumbai, Maharashtra 400001
+               12B, Bose St, Kodungaiyur (East), Krishnamoorthy Nagar, Kodungaiyur, Chennai, Tamil Nadu 6001181
               </span>
             </li>
             <li className="flex items-center gap-2 sm:gap-3">
