@@ -232,7 +232,7 @@ const About = () => {
               {!isVideoPlaying ? (
                 <>
                   <img
-                    src="public/assets/logo.png"
+                    src="src/assets"
                     alt="Video thumbnail"
                     className="w-full h-full object-cover"
                   />
