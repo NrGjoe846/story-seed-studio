@@ -129,6 +129,16 @@ export const Footer = () => {
           </ul>
         </div>
       </div>
+
+      {/* Bottom Bar */}
+      <div className="border-t border-primary-foreground/10 mt-8 sm:mt-12 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
+        <p className="text-primary-foreground/50 text-xs sm:text-sm text-center sm:text-left">
+          © {new Date().getFullYear()} Story Seed Studio. All rights reserved.
+        </p>
+        <p className="text-primary-foreground/50 text-xs sm:text-sm text-center sm:text-right">
+          
+        </p>
+      </div>
     </div>
   </footer>;
 };
