@@ -231,9 +231,9 @@ const PaymentPortal = () => {
         phone: personalInfo.phone,
         age: parseInt(personalInfo.age),
         city: personalInfo.city,
-        story_title: '',
-        category: '',
-        story_description: '',
+        story_title: null, // Will be filled when user submits story
+        category: null, // Will be filled when user submits story
+        story_description: null, // Will be filled when user submits story
         payment_status: 'paid', // Update status
         unique_key: key,
         payment_details: paymentDetails, // Store full Razorpay details

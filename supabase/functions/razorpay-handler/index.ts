@@ -29,7 +29,8 @@ function base64Encode(str: string): string {
     return btoa(str);
 }
 
-serve(async (req) => {
+// @ts-ignore - Deno.serve types are available at runtime
+serve(async (req: Request) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
@@ -38,7 +39,9 @@ serve(async (req) => {
     try {
         const { action, amount, razorpay_payment_id, razorpay_order_id, razorpay_signature } = await req.json()
 
+        // @ts-ignore - Deno.env is available at runtime in Supabase Edge Functions
         const key_id = Deno.env.get('RAZORPAY_KEY_ID')
+        // @ts-ignore - Deno.env is available at runtime in Supabase Edge Functions
         const key_secret = Deno.env.get('RAZORPAY_KEY_SECRET')
 
         if (!key_id || !key_secret) {
@@ -125,11 +128,13 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
 
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Edge Function Error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Internal server error';
         return new Response(
-            JSON.stringify({ error: error.message || 'Internal server error' }),
+            JSON.stringify({ error: errorMessage }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
     }
 })
+
