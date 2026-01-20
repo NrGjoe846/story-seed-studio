@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Trophy, Users, ArrowRight, Star, TrendingUp, Clock, Gift, Vote } from 'lucide-react';
+import { Calendar, Users, ArrowRight, Star, TrendingUp, Clock, Vote, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +19,7 @@ interface Event {
   registration_open: boolean;
   participantCount: number;
   status: 'live' | 'upcoming' | 'ended';
+  userStatus?: 'none' | 'paid' | 'registered';
 }
 
 export const EventsSection = () => {
@@ -37,12 +38,39 @@ export const EventsSection = () => {
 
       if (error) throw error;
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
+
       const eventsWithStats = await Promise.all(
         (eventsData || []).map(async (event) => {
           const { count } = await supabase
             .from('registrations')
             .select('*', { count: 'exact', head: true })
             .eq('event_id', event.id);
+
+          // Check if user has already paid/registered
+          let userStatus: 'none' | 'paid' | 'registered' = 'none';
+          if (currentUserId) {
+            const { data: reg } = await supabase
+              .from('registrations')
+              .select('payment_status, story_title')
+              .eq('event_id', event.id)
+              .eq('user_id', currentUserId)
+              .maybeSingle();
+
+            const { data: clgReg } = await supabase
+              .from('clg_registrations')
+              .select('payment_status, story_title')
+              .eq('event_id', event.id)
+              .eq('user_id', currentUserId)
+              .maybeSingle();
+
+            const existingReg = reg || clgReg;
+            if (existingReg) {
+              if (existingReg.story_title) userStatus = 'registered';
+              else if (existingReg.payment_status === 'paid') userStatus = 'paid';
+            }
+          }
 
           const now = new Date();
           const start = event.start_date ? new Date(event.start_date) : null;
@@ -64,6 +92,7 @@ export const EventsSection = () => {
             registration_open: event.registration_open !== false,
             participantCount: count || 0,
             status,
+            userStatus,
           };
         })
       );
@@ -81,7 +110,7 @@ export const EventsSection = () => {
 
     const channel = supabase
       .channel('home-events')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchEvents)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => fetchEvents())
       .subscribe();
 
     return () => {
@@ -166,7 +195,7 @@ export const EventsSection = () => {
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 {/* Glass-morphism Card */}
-                <div className="relative backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-white/20 dark:border-white/10 rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-[1.02]">
+                <div className="relative backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-white/20 dark:border-white/10 rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 hover:scale-[1.02]">
                   {/* Background Image with Overlay */}
                   <div className="relative aspect-[16/10] overflow-hidden">
                     <img
@@ -182,7 +211,7 @@ export const EventsSection = () => {
                         className={cn(
                           'px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm',
                           event.status === 'live'
-                            ? 'bg-red-500/90 text-white pulse-live'
+                            ? 'bg-red-500/90 text-white'
                             : event.status === 'upcoming'
                               ? 'bg-blue-500/90 text-white'
                               : 'bg-gray-500/90 text-white'
@@ -216,11 +245,22 @@ export const EventsSection = () => {
 
                     {/* Action Buttons */}
                     <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                      {event.registration_open ? (
+                      {event.userStatus === 'registered' ? (
+                        <Button variant="outline" className="flex-1 bg-green-50 text-green-600 border-green-200 cursor-default hover:bg-green-50">
+                          <Check className="w-4 h-4 mr-2" /> Registered
+                        </Button>
+                      ) : event.userStatus === 'paid' ? (
                         <Link to={`/register?eventId=${event.id}`} className="flex-1">
-                          <Button variant="hero" className="w-full group/btn bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90">
-                            Register Now
-                            <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+                          <Button variant="hero" className="w-full group bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90">
+                            Complete Registration
+                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                          </Button>
+                        </Link>
+                      ) : event.registration_open ? (
+                        <Link to={`/pay-event/${event.id}`} className="flex-1">
+                          <Button variant="hero" className="w-full group bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90">
+                            Participate & Pay
+                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                           </Button>
                         </Link>
                       ) : (
@@ -229,7 +269,7 @@ export const EventsSection = () => {
                         </Button>
                       )}
                       <Link to={`/voting/${event.id}`} className="flex-1">
-                        <Button variant="outline" className="w-full group/btn bg-white text-[#9B1B1B] hover:bg-[#9B1B1B] hover:text-white border-2 border-[#9B1B1B] transition-all duration-300 font-semibold">
+                        <Button variant="outline" className="w-full group bg-white text-[#9B1B1B] hover:bg-[#9B1B1B] hover:text-white border-2 border-[#9B1B1B] transition-all duration-300 font-semibold">
                           <Vote className="w-4 h-4 mr-2" />
                           Vote
                         </Button>

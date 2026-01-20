@@ -8,12 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface Participant {
   id: string;
   first_name: string;
   last_name: string;
   story_title: string;
+  payment_status: string;
+  unique_key: string;
+  role: string;
 }
 
 interface Event {
@@ -32,6 +36,7 @@ interface Event {
   is_payment_enabled: boolean | null;
   qr_code_url: string | null;
   voting_open: boolean | null;
+  event_type: 'school' | 'college' | 'both' | null;
   participantCount?: number;
   voteCount?: number;
 }
@@ -64,21 +69,34 @@ const AdminCompetitions = () => {
 
       const eventsWithCounts = await Promise.all(
         (eventsData || []).map(async (event) => {
-          const { count: participantCount } = await supabase
-            .from('registrations')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', event.id);
+          let participantCount = 0;
+          let voteCount = 0;
 
-          const { data: registrations } = await supabase
-            .from('registrations')
-            .select('overall_votes')
-            .eq('event_id', event.id);
+          if (event.event_type !== 'college') {
+            const { count: schoolCount } = await supabase
+              .from('registrations')
+              .select('*', { count: 'exact', head: true })
+              .eq('event_id', event.id);
+            participantCount += schoolCount || 0;
 
-          const voteCount = registrations?.reduce((sum, r) => sum + (r.overall_votes || 0), 0) || 0;
+            const { data: schoolRegs } = await supabase
+              .from('registrations')
+              .select('overall_votes')
+              .eq('event_id', event.id);
+            voteCount += schoolRegs?.reduce((sum, r) => sum + (r.overall_votes || 0), 0) || 0;
+          }
+
+          if (event.event_type !== 'school') {
+            const { count: collegeCount } = await supabase
+              .from('clg_registrations')
+              .select('*', { count: 'exact', head: true })
+              .eq('event_id', event.id);
+            participantCount += collegeCount || 0;
+          }
 
           return {
             ...event,
-            participantCount: participantCount || 0,
+            participantCount,
             voteCount,
           };
         })
@@ -93,15 +111,30 @@ const AdminCompetitions = () => {
   };
 
   const fetchParticipants = async (eventId: string) => {
-    const { data, error } = await supabase
-      .from('registrations')
-      .select('id, first_name, last_name, story_title')
-      .eq('event_id', eventId)
-      .order('overall_votes', { ascending: false });
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
 
-    if (!error && data) {
-      setParticipants(data);
+    let allParticipants: any[] = [];
+
+    if (event.event_type !== 'college') {
+      const { data: schoolData } = await supabase
+        .from('registrations')
+        .select('id, first_name, last_name, story_title, payment_status, unique_key, role')
+        .eq('event_id', eventId);
+      if (schoolData) allParticipants = [...allParticipants, ...schoolData];
     }
+
+    if (event.event_type !== 'school') {
+      const { data: collegeData } = await supabase
+        .from('clg_registrations')
+        .select('id, first_name, last_name, story_title, payment_status, unique_key')
+        .eq('event_id', eventId);
+      if (collegeData) {
+        allParticipants = [...allParticipants, ...collegeData.map(p => ({ ...p, role: 'college' }))];
+      }
+    }
+
+    setParticipants(allParticipants);
   };
 
   useEffect(() => {
@@ -339,7 +372,10 @@ const AdminCompetitions = () => {
                       </td>
                       <td className="p-4">
                         <div className="flex gap-2 flex-wrap">
-                          <Button size="sm" variant="ghost" onClick={() => setSelectedEvent(event)}>
+                          <Button size="sm" variant="ghost" onClick={async () => {
+                            setSelectedEvent(event);
+                            await fetchParticipants(event.id);
+                          }}>
                             <Eye className="w-4 h-4" />
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => setEditEvent(event)}>
@@ -400,6 +436,47 @@ const AdminCompetitions = () => {
               {selectedEvent.description && (
                 <p className="text-muted-foreground">{selectedEvent.description}</p>
               )}
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  Participants List
+                  <span className="text-xs font-normal text-muted-foreground">({participants.length})</span>
+                </h3>
+                <div className="max-h-[300px] overflow-y-auto rounded-lg border border-border">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted sticky top-0">
+                      <tr>
+                        <th className="p-2 text-left">Name</th>
+                        <th className="p-2 text-left">Key</th>
+                        <th className="p-2 text-left">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {participants.length === 0 ? (
+                        <tr><td colSpan={3} className="p-4 text-center text-muted-foreground italic">No participants yet</td></tr>
+                      ) : (
+                        participants.map((p) => (
+                          <tr key={p.id} className="border-t border-border/50 hover:bg-muted/30">
+                            <td className="p-2">
+                              <p className="font-medium">{p.first_name} {p.last_name}</p>
+                              <p className="text-[10px] text-muted-foreground capitalize">{p.role}</p>
+                            </td>
+                            <td className="p-2 font-mono">{p.unique_key || '-'}</td>
+                            <td className="p-2">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-full",
+                                p.payment_status === 'paid' ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                              )}>
+                                {p.payment_status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>

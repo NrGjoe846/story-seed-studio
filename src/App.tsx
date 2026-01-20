@@ -20,6 +20,7 @@ import Privacy from "./pages/Privacy";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import PaymentPortal from "./pages/PaymentPortal";
 
 // Auth pages
 import JudgeLogin from "./pages/auth/JudgeLogin";
@@ -68,11 +69,13 @@ const App = () => (
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/voting/:eventId?" element={<Voting />} />
+              <Route path="/voting/:eventId" element={<Voting />} />
+              <Route path="/voting" element={<Voting />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/pay-event/:eventId" element={<PaymentPortal />} />
             </Route>
 
             {/* Auth routes */}
