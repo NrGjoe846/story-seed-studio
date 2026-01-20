@@ -7,6 +7,12 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 const generateUniqueKey = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 };
@@ -31,6 +37,9 @@ const PaymentPortal = () => {
     city: '',
     schoolName: '',
     collegeName: '',
+    classLevel: '',
+    degree: '',
+    branch: '',
     role: null as 'school' | 'college' | null
   });
 
@@ -108,34 +117,106 @@ const PaymentPortal = () => {
     return true;
   };
 
-  const handlePayment = async () => {
-    if (!transactionId || !senderName) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter transaction ID and sender name.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSubmitting(true);
-    const key = generateUniqueKey();
-
+  const handleRazorpayPayment = async () => {
     try {
-      const tableName: 'registrations' | 'clg_registrations' =
-        personalInfo.role === 'college' ? 'clg_registrations' : 'registrations';
+      setSubmitting(true); // Use submitting for payment process
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: 'Error', description: 'You must be logged in to pay.', variant: 'destructive' });
+        setSubmitting(false);
+        return;
+      }
+
+      // 1. Create Order
+      const { data: orderData, error: orderError } = await supabase.functions.invoke('razorpay-handler', {
+        body: { action: 'create-order', amount: event.registration_fee * 100 }, // Amount in paisa
+      });
+
+      if (orderError || !orderData?.id) {
+        throw new Error(orderError?.message || 'Failed to create order');
+      }
+
+      // 2. Open Razorpay Checkout
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // User needs to set this
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Story Seed Studio",
+        description: "Competition Registration Fee",
+        image: "/assets/logo.png",
+        order_id: orderData.id,
+        handler: async function (response: any) {
+          try {
+            // 3. Verify Signature
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('razorpay-handler', {
+              body: {
+                action: 'verify-signature',
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              },
+            });
+
+            if (verifyError || !verifyData?.success) {
+              throw new Error('Payment verification failed');
+            }
+
+            // 4. Submit Registration (Signature verified)
+            await submitPaymentToDB({
+              paymentId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id,
+              signature: response.razorpay_signature,
+              amount: event.registration_fee,
+              method: 'razorpay'
+            });
+
+          } catch (err: any) {
+            console.error('Verification Error:', err);
+            toast({ title: 'Payment Verification Failed', description: err.message, variant: 'destructive' });
+          }
+        },
+        prefill: {
+          name: `${personalInfo.firstName} ${personalInfo.lastName}`,
+          email: session.user.email,
+          contact: personalInfo.phone,
+        },
+        theme: {
+          color: "#9B1B1B",
+        },
+        modal: {
+          ondismiss: function () {
+            setSubmitting(false); // Reset submitting if modal is dismissed
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        toast({ title: 'Payment Failed', description: response.error.description, variant: 'destructive' });
+        setSubmitting(false); // Reset submitting on payment failure
+      });
+      rzp.open();
+
+    } catch (error: any) {
+      console.error('Payment Error:', error);
+      toast({ title: 'Payment Error', description: error.message, variant: 'destructive' });
+      setSubmitting(false); // Reset submitting on any error
+    }
+  };
+
+  const submitPaymentToDB = async (paymentDetails: any) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const user = session.user;
+      const key = generateUniqueKey();
+
+      const tableName = personalInfo.role === 'school' ? 'registrations' : 'clg_registrations';
 
       const payload: any = {
-        user_id: user.id,
         event_id: eventId,
-        payment_status: 'paid',
-        unique_key: key,
-        payment_details: {
-          transaction_id: transactionId,
-          sender_name: senderName,
-          method: paymentMethod,
-          timestamp: new Date().toISOString(),
-        },
+        user_id: user.id,
         first_name: personalInfo.firstName,
         last_name: personalInfo.lastName,
         email: user.email,
@@ -145,12 +226,18 @@ const PaymentPortal = () => {
         story_title: '',
         category: '',
         story_description: '',
+        payment_status: 'paid', // Update status
+        unique_key: key,
+        payment_details: paymentDetails, // Store full Razorpay details
       };
 
       if (personalInfo.role === 'school') {
-        payload.class_level = null;
+        payload.school_name = personalInfo.schoolName;
+        payload.class_level = personalInfo.classLevel;
       } else {
         payload.college_name = personalInfo.collegeName;
+        payload.degree = personalInfo.degree;
+        payload.branch = personalInfo.branch;
       }
 
       const { error } = await supabase
@@ -159,7 +246,7 @@ const PaymentPortal = () => {
 
       if (error) throw error;
 
-      // Update profile institution/college if provided
+      // Update profile institution/college
       if (user.id) {
         const profileUpdate: any = {};
         if (personalInfo.role === 'school' && personalInfo.schoolName) {
@@ -174,19 +261,11 @@ const PaymentPortal = () => {
       }
 
       setUniqueKey(key);
-      setStep(3); // Go to success step
-
-      toast({
-        title: 'Payment Recorded!',
-        description: `Your unique key is: ${key}.`,
-      });
+      setStep(3);
+      toast({ title: 'Success', description: 'Payment successful! Registration complete.', });
     } catch (error: any) {
-      console.error('Payment error:', error);
-      toast({
-        title: 'Payment Error',
-        description: error.message || 'Could not record payment.',
-        variant: 'destructive',
-      });
+      console.error('DB Insert Error:', error);
+      toast({ title: 'Registration Failed', description: error.message + ' (Payment was successful, please contact support)', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -317,72 +396,24 @@ const PaymentPortal = () => {
           )}
 
           {step === 2 && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setPaymentMethod('upi')}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'upi' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
-                    }`}
-                >
-                  <Smartphone className="w-6 h-6" />
-                  <span className="font-semibold">UPI App</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('qr')}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'qr' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
-                    }`}
-                >
-                  <QrCode className="w-6 h-6" />
-                  <span className="font-semibold">Scan & Pay</span>
-                </button>
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-2">Registration Fee: ₹{event.registration_fee || 99}</h2>
+                <p className="text-muted-foreground">Secure payment via Razorpay</p>
               </div>
 
-              {paymentMethod === 'qr' && event.qr_code_url && (
-                <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-2xl animate-fade-in text-center">
-                  <img src={event.qr_code_url} alt="Payment QR" className="w-48 h-48 object-contain" />
-                  <p className="text-sm font-medium text-black">Scan this QR code to pay Rs. {event.registration_fee || '100'}</p>
+              <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{event?.name}</p>
+                  <p className="text-sm text-muted-foreground">{personalInfo.role === 'school' ? 'School' : 'College'} Category</p>
                 </div>
-              )}
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="senderName">Sender Name (as in bank)</Label>
-                  <Input
-                    id="senderName"
-                    placeholder="Enter name"
-                    value={senderName}
-                    onChange={(e) => setSenderName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="transactionId">Transaction ID / UTR Number</Label>
-                  <Input
-                    id="transactionId"
-                    placeholder="Enter 12-digit ID"
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                  />
-                </div>
+                <div className="font-bold text-xl">₹{event.registration_fee || 99}.00</div>
               </div>
 
               <div className="flex gap-4">
-                <Button variant="outline" onClick={() => setStep(1)} className="h-14 px-6">Back</Button>
-                <Button
-                  className="flex-1 h-14 bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] text-white text-lg font-bold rounded-2xl shadow-xl hover:scale-[1.02] transition-transform"
-                  onClick={handlePayment}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-6 h-6 mr-2 animate-spin" />
-                      Recording...
-                    </>
-                  ) : (
-                    <>
-                      Confirm Payment & Get Key
-                      <ArrowRight className="w-6 h-6 ml-2" />
-                    </>
-                  )}
+                <Button onClick={() => setStep(1)} variant="ghost" disabled={submitting} className="h-12">Back</Button>
+                <Button onClick={handleRazorpayPayment} disabled={submitting} className="flex-1 h-12 bg-[#9B1B1B] hover:bg-[#7d1616] text-white">
+                  {submitting ? <Loader2 className="animate-spin mr-2" /> : 'Pay Now'}
                 </Button>
               </div>
             </div>

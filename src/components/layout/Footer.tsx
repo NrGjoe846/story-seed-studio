@@ -29,6 +29,12 @@ const footerLinks = {
   }, {
     name: 'FAQ',
     path: '/faq'
+  }, {
+    name: 'Shipping & Delivery',
+    path: '/shipping-policy'
+  }, {
+    name: 'Cancellation & Refund',
+    path: '/refund-policy'
   }]
 };
 const socialLinks = [{
@@ -115,7 +121,7 @@ export const Footer = () => {
             <li className="flex items-start gap-2 sm:gap-3">
               <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary mt-0.5 flex-shrink-0" />
               <span className="text-primary-foreground/70 text-xs sm:text-sm">
-               12B, Bose St, Kodungaiyur (East), Krishnamoorthy Nagar, Kodungaiyur, Chennai, Tamil Nadu 6001181
+                12B, Bose St, Kodungaiyur (East), Krishnamoorthy Nagar, Kodungaiyur, Chennai, Tamil Nadu 6001181
               </span>
             </li>
             <li className="flex items-center gap-2 sm:gap-3">
@@ -136,7 +142,7 @@ export const Footer = () => {
           © {new Date().getFullYear()} Story Seed Studio. All rights reserved.
         </p>
         <p className="text-primary-foreground/50 text-xs sm:text-sm text-center sm:text-right">
-          
+
         </p>
       </div>
     </div>
