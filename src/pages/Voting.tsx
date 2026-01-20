@@ -39,7 +39,7 @@ const Voting = () => {
   const [verificationEmail, setVerificationEmail] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  
+
   const [contestants, setContestants] = useState<Contestant[]>([]);
   const [judgeTop6Ids, setJudgeTop6Ids] = useState<Set<string>>(new Set());
   const [selectedContestant, setSelectedContestant] = useState<Contestant | null>(null);
@@ -65,12 +65,12 @@ const Voting = () => {
   useEffect(() => {
     const checkVerification = async () => {
       setCheckingAuth(true);
-      
+
       // Check localStorage first
       const storedVerified = localStorage.getItem('story_seed_verified') === 'true';
       const storedEmail = localStorage.getItem('story_seed_user_email');
       const storedName = localStorage.getItem('story_seed_user_name');
-      
+
       if (storedVerified && storedEmail) {
         setIsVerified(true);
         setVerificationEmail(storedEmail);
@@ -78,7 +78,7 @@ const Voting = () => {
         setCheckingAuth(false);
         return;
       }
-      
+
       // Check Supabase session
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.email) {
@@ -87,7 +87,7 @@ const Voting = () => {
         localStorage.setItem('story_seed_verified', 'true');
         localStorage.setItem('story_seed_user_email', session.user.email);
         localStorage.setItem('story_seed_user_id', session.user.id);
-        
+
         // Try to get name from registrations or user metadata
         const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name;
         if (userName) {
@@ -100,19 +100,19 @@ const Voting = () => {
             .eq('email', session.user.email)
             .limit(1)
             .maybeSingle();
-          
+
           if (registration?.first_name) {
             setVoterName(registration.first_name);
             localStorage.setItem('story_seed_user_name', registration.first_name);
           }
         }
       }
-      
+
       setCheckingAuth(false);
     };
-    
+
     checkVerification();
-    
+
     // Listen for auth state changes (OAuth callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user?.email) {
@@ -121,7 +121,7 @@ const Voting = () => {
         localStorage.setItem('story_seed_verified', 'true');
         localStorage.setItem('story_seed_user_email', session.user.email);
         localStorage.setItem('story_seed_user_id', session.user.id);
-        
+
         const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name;
         if (userName) {
           setVoterName(userName.split(' ')[0]);
@@ -129,7 +129,7 @@ const Voting = () => {
         }
       }
     });
-    
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -217,27 +217,27 @@ const Voting = () => {
       // 4th: 2nd highest from Tiny Tales, 5th: 2nd highest from Young Dreamers, 6th: 2nd highest from Story Champions
       const classLevels = ['Tiny Tales', 'Young Dreamers', 'Story Champions'];
       const top6: typeof entriesWithScores = [];
-      
+
       // Group by class level
       const entriesByLevel: Record<string, typeof entriesWithScores> = {};
       for (const level of classLevels) {
         entriesByLevel[level] = entriesWithScores.filter(e => e.class_level === level);
       }
-      
+
       // First round: Pick highest from each class level (positions 1, 2, 3)
       for (const level of classLevels) {
         if (entriesByLevel[level].length >= 1) {
           top6.push(entriesByLevel[level][0]);
         }
       }
-      
+
       // Second round: Pick second highest from each class level (positions 4, 5, 6)
       for (const level of classLevels) {
         if (entriesByLevel[level].length >= 2) {
           top6.push(entriesByLevel[level][1]);
         }
       }
-      
+
       // Fill remaining with top entries if needed (in case some classes have fewer than 2)
       if (top6.length < 6) {
         const top6Ids = new Set(top6.map(e => e.id));
@@ -250,7 +250,7 @@ const Voting = () => {
 
       // All remaining entries after top 6 are eligible for community voting
       const remainingAfterTop6 = entriesWithScores.filter(e => !top6Ids.has(e.id));
-      
+
       // If no judge votes yet, all registrations are eligible (admin opened voting manually)
       if (Object.keys(scoreData).length === 0) {
         setEligibleForVotingIds(new Set(registrations.map(r => r.id)));
@@ -364,8 +364,8 @@ const Voting = () => {
                 )
               );
               // Also update selected contestant if it's the same one
-              setSelectedContestant((prev) => 
-                prev && prev.id === updatedReg.id 
+              setSelectedContestant((prev) =>
+                prev && prev.id === updatedReg.id
                   ? { ...prev, overall_votes: updatedReg.overall_votes || 0, overall_views: updatedReg.overall_views || 0 }
                   : prev
               );
@@ -487,7 +487,7 @@ const Voting = () => {
 
     try {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
+
       const { data, error } = await supabase
         .from('voter_details')
         .select('id, created_at')
@@ -507,10 +507,10 @@ const Voting = () => {
         const now = new Date();
         const timeDiff = now.getTime() - lastVoteTime.getTime();
         const hoursRemaining = Math.ceil((24 * 60 * 60 * 1000 - timeDiff) / (1000 * 60 * 60));
-        
-        return { 
-          canVote: false, 
-          reason: `You already voted for this contestant. You can vote again in ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}` 
+
+        return {
+          canVote: false,
+          reason: `You already voted for this contestant. You can vote again in ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}`
         };
       }
 
@@ -529,7 +529,7 @@ const Voting = () => {
         const status = await checkCanVote(selectedContestant.id, voterPhone);
         setCanVoteStatus(status);
         setCheckingVote(false);
-        
+
         // Record view when valid phone is entered (only once per voter per video)
         if (!hasRecordedView) {
           recordView(selectedContestant.id, voterPhone);
@@ -538,7 +538,7 @@ const Voting = () => {
         setCanVoteStatus({ canVote: true });
       }
     };
-    
+
     checkVoteStatusAndView();
   }, [voterPhone, selectedContestant, hasRecordedView]);
 
@@ -602,7 +602,7 @@ const Voting = () => {
 
   const handleVote = async () => {
     if (!selectedContestant || !eventId) return;
-    
+
     if (!voterName.trim() || !voterPhone.trim()) {
       toast({
         title: 'Missing Information',
@@ -798,31 +798,31 @@ const Voting = () => {
   // Get YouTube embed URL
   const getYouTubeEmbedUrl = (url: string | null): string | null => {
     if (!url) return null;
-    
+
     // Already an embed URL
     if (url.includes('/embed/')) {
       return url;
     }
-    
+
     // Extract video ID from various YouTube URL formats
     let videoId = null;
-    
+
     // youtu.be/VIDEO_ID
     const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
     if (shortMatch) {
       videoId = shortMatch[1];
     }
-    
+
     // youtube.com/watch?v=VIDEO_ID
     const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
     if (watchMatch) {
       videoId = watchMatch[1];
     }
-    
+
     if (videoId) {
       return `https://www.youtube.com/embed/${videoId}`;
     }
-    
+
     return url;
   };
 
@@ -874,20 +874,15 @@ const Voting = () => {
                 </div>
 
                 <Button
-                  variant="outline"
                   onClick={handleGoogleSignIn}
                   disabled={isSigningIn}
-                  className="w-full"
-                  size="lg"
+                  className="w-full h-14 text-lg font-semibold bg-white text-black border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-3 group shadow-sm hover:shadow-md"
                 >
                   {isSigningIn ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Connecting...
-                    </>
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   ) : (
                     <>
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6" viewBox="0 0 24 24">
                         <path
                           fill="currentColor"
                           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -898,7 +893,7 @@ const Voting = () => {
                         />
                         <path
                           fill="currentColor"
-                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
                         />
                         <path
                           fill="currentColor"
@@ -982,7 +977,7 @@ const Voting = () => {
   const filteredContestants = contestants.filter((contestant) => {
     // Exclude judge top 6 winners from community voting
     if (judgeTop6Ids.has(contestant.id)) return false;
-    
+
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -1193,7 +1188,7 @@ const Voting = () => {
                 <h3 className="font-display text-xl font-semibold text-foreground mb-6">
                   Enter Your Details to Vote
                 </h3>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 font-medium text-foreground">
@@ -1296,7 +1291,7 @@ const Voting = () => {
               Share this amazing story with your friends and family
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             {/* Share Link Input */}
             <div className="space-y-2">
