@@ -1,10 +1,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { encode as base64Encode } from "https://deno.land/std@0.177.0/encoding/base64.ts";
-import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Helper function to create HMAC SHA256 using Web Crypto API
+async function createHmacSha256(key: string, message: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(key);
+    const messageData = encoder.encode(message);
+
+    const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+    );
+
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+    const hashArray = Array.from(new Uint8Array(signature));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Helper function to encode to base64
+function base64Encode(str: string): string {
+    return btoa(str);
 }
 
 serve(async (req) => {
@@ -28,8 +50,7 @@ serve(async (req) => {
         }
 
         // Create Basic Auth header
-        const authString = `${key_id}:${key_secret}`;
-        const authHeader = `Basic ${base64Encode(new TextEncoder().encode(authString))}`;
+        const authHeader = `Basic ${base64Encode(`${key_id}:${key_secret}`)}`;
 
         if (action === 'create-order') {
             if (!amount || amount <= 0) {
@@ -82,7 +103,7 @@ serve(async (req) => {
             }
 
             const payload = `${razorpay_order_id}|${razorpay_payment_id}`;
-            const expectedSignature = hmac("sha256", key_secret, payload, "utf8", "hex");
+            const expectedSignature = await createHmacSha256(key_secret, payload);
 
             if (expectedSignature === razorpay_signature) {
                 console.log('Payment verified successfully:', razorpay_payment_id);
