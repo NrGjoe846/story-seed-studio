@@ -142,14 +142,13 @@ const PaymentPortal = () => {
         phone: personalInfo.phone,
         age: parseInt(personalInfo.age),
         city: personalInfo.city,
-        // Story defaults (to be updated later in Register.tsx)
-        story_title: 'Pending Registration',
-        category: 'Pending',
-        story_description: 'Pending',
+        story_title: null,
+        category: null,
+        story_description: null,
       };
 
       if (personalInfo.role === 'school') {
-        payload.class_level = 'Pending';
+        payload.class_level = null;
       } else {
         payload.college_name = personalInfo.collegeName;
       }

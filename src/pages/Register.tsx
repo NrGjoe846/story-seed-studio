@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, User, FileText, ArrowRight, ArrowLeft, Loader2, Calendar, Mail, ShieldCheck, CreditCard, Scan, Wallet, FileType, GraduationCap, School, Video } from 'lucide-react';
+import { Check, User, FileText, ArrowRight, ArrowLeft, Loader2, Calendar, Mail, ShieldCheck, CreditCard, Scan, Wallet, FileType, GraduationCap, School, Video, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -22,6 +23,10 @@ interface Event {
   is_payment_enabled: boolean;
   qr_code_url: string | null;
   event_type: 'school' | 'college' | 'both' | null;
+  registration_open: boolean;
+  registration_start_date: string | null;
+  registration_deadline: string | null;
+  payment_deadline: string | null;
 }
 
 const steps = [
@@ -123,7 +128,7 @@ const Register = () => {
     const fetchData = async () => {
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select('id, name, description, is_payment_enabled, qr_code_url, event_type')
+        .select('id, name, description, is_payment_enabled, qr_code_url, event_type, registration_open, registration_start_date, registration_deadline, payment_deadline')
         .eq('is_active', true);
 
       if (!eventsError && eventsData) {
@@ -434,148 +439,187 @@ const Register = () => {
           </div>
         </div>
 
-        <div className="bg-card p-8 rounded-2xl shadow-lg border border-border">
-          {currentStep === 1 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold text-center">Get Started</h2>
-              {!isEventLocked && (
-                <div className="space-y-2">
-                  <Label>Select Event</Label>
-                  <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                    <SelectTrigger><SelectValue placeholder="Select an event" /></SelectTrigger>
-                    <SelectContent>{events.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent>
-                  </Select>
+        {(() => {
+          const event = events.find(e => e.id === selectedEventId);
+          if (event && currentStep > 2) {
+            const now = new Date();
+            const isRegEnabled = event.registration_open ||
+              (event.registration_start_date && now > new Date(event.registration_start_date));
+
+            if (!isRegEnabled) {
+              return (
+                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-8 text-center space-y-4 animate-in fade-in zoom-in-95 mb-10 shadow-lg relative z-20">
+                  <Clock className="w-12 h-12 text-amber-500 mx-auto" />
+                  <h2 className="text-2xl font-bold text-amber-900">Registration Portal Not Active</h2>
+                  <p className="text-amber-700">
+                    The story submission portal for <strong>{event.name}</strong> is currently closed.
+                    {event.registration_start_date && (
+                      <span> It is scheduled to open on {format(new Date(event.registration_start_date), 'MMM d, yyyy h:mm a')}.</span>
+                    )}
+                  </p>
+                  <Button variant="outline" onClick={() => navigate('/events')} className="mt-4">
+                    Back to Events
+                  </Button>
                 </div>
-              )}
-              {emailStep === 'pending' ? (
-                <Button
-                  onClick={handleGoogleSignIn}
-                  disabled={isSigningIn || !selectedEventId}
-                  className="w-full h-14 text-lg font-semibold bg-white text-black border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-3 group shadow-sm hover:shadow-md"
-                >
-                  {isSigningIn ? (
-                    <Loader2 className="animate-spin w-6 h-6 text-primary" />
-                  ) : (
-                    <>
-                      <svg className="w-6 h-6" viewBox="0 0 24 24">
-                        <path
-                          fill="currentColor"
-                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                        />
-                        <path
-                          fill="currentColor"
-                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                        />
-                        <path
-                          fill="currentColor"
-                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-                        />
-                        <path
-                          fill="currentColor"
-                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                        />
-                      </svg>
-                      Continue with Google
-                    </>
+              );
+            }
+          }
+          return null;
+        })()}
+
+        {!(() => {
+          const event = events.find(e => e.id === selectedEventId);
+          if (event && currentStep > 2) {
+            const now = new Date();
+            const isRegEnabled = event.registration_open ||
+              (event.registration_start_date && now > new Date(event.registration_start_date));
+            return !isRegEnabled;
+          }
+          return false;
+        })() && (
+            <div className="bg-card p-8 rounded-2xl shadow-lg border border-border">
+              {currentStep === 1 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                  <h2 className="text-2xl font-bold text-center">Get Started</h2>
+                  {!isEventLocked && (
+                    <div className="space-y-2">
+                      <Label>Select Event</Label>
+                      <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                        <SelectTrigger><SelectValue placeholder="Select an event" /></SelectTrigger>
+                        <SelectContent>{events.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                   )}
-                </Button>
-              ) : (
-                <div className="bg-green-50 p-4 rounded-xl flex items-center gap-3 border border-green-100">
-                  <Check className="text-green-600" />
-                  <span className="font-medium">{verificationEmail}</span>
-                  <Button onClick={() => setCurrentStep(2)} className="ml-auto">Next</Button>
+                  {emailStep === 'pending' ? (
+                    <Button
+                      onClick={handleGoogleSignIn}
+                      disabled={isSigningIn || !selectedEventId}
+                      className="w-full h-14 text-lg font-semibold bg-white text-black border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-3 group shadow-sm hover:shadow-md"
+                    >
+                      {isSigningIn ? (
+                        <Loader2 className="animate-spin w-6 h-6 text-primary" />
+                      ) : (
+                        <>
+                          <svg className="w-6 h-6" viewBox="0 0 24 24">
+                            <path
+                              fill="currentColor"
+                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            />
+                            <path
+                              fill="currentColor"
+                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                              fill="currentColor"
+                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                            />
+                            <path
+                              fill="currentColor"
+                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                            />
+                          </svg>
+                          Continue with Google
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="bg-green-50 p-4 rounded-xl flex items-center gap-3 border border-green-100">
+                      <Check className="text-green-600" />
+                      <span className="font-medium">{verificationEmail}</span>
+                      <Button onClick={() => setCurrentStep(2)} className="ml-auto">Next</Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {currentStep === 2 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                  <h2 className="text-2xl font-bold text-center">Verify Your Key</h2>
+                  <div className="space-y-2">
+                    <Label>Unique Key</Label>
+                    <Input value={uniqueKey} onChange={e => setUniqueKey(e.target.value.toUpperCase())} placeholder="Enter your key" className="h-14 text-center text-xl tracking-widest font-mono" />
+                  </div>
+                  <div className="flex gap-4">
+                    <Button onClick={handlePrev} variant="ghost">Back</Button>
+                    <Button onClick={handleNext} disabled={!uniqueKey} className="flex-1 h-12">Verify & Continue</Button>
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 3 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                  <h2 className="text-2xl font-bold text-center">Select Role</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button onClick={() => setRole('school')} variant={role === 'school' ? 'default' : 'outline'} className="h-24 flex-col gap-2">
+                      <School /> School
+                    </Button>
+                    <Button onClick={() => setRole('college')} variant={role === 'college' ? 'default' : 'outline'} className="h-24 flex-col gap-2">
+                      <GraduationCap /> College
+                    </Button>
+                  </div>
+                  <div className="flex gap-4">
+                    <Button onClick={handlePrev} variant="ghost">Back</Button>
+                    <Button onClick={handleNext} disabled={!role} className="flex-1 h-12">Next</Button>
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 4 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                  <h2 className="text-2xl font-bold">Story Details</h2>
+                  <div className="space-y-2"><Label>Story Title</Label><Input value={storyDetails.title} onChange={e => setStoryDetails(s => ({ ...s, title: e.target.value }))} /></div>
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select value={storyDetails.category} onValueChange={v => setStoryDetails(s => ({ ...s, category: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fiction">Fiction</SelectItem>
+                        <SelectItem value="non-fiction">Non-Fiction</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <textarea className="w-full h-32 p-3 rounded-md border" value={storyDetails.description} onChange={e => setStoryDetails(s => ({ ...s, description: e.target.value }))} />
+                  </div>
+                  {role === 'school' ? (
+                    <div className="space-y-2">
+                      <Label>Class Level</Label>
+                      <Input value={storyDetails.classLevel} onChange={e => setStoryDetails(s => ({ ...s, classLevel: e.target.value }))} placeholder="e.g. 10th Grade" />
+                      <Label className="mt-4 block">Upload Video</Label>
+                      <Input type="file" onChange={e => setStoryDetails(s => ({ ...s, videoFile: e.target.files?.[0] || null }))} />
+                    </div>
+                  ) : (
+                    <div className="space-y-2"><Label>Upload PDF</Label><Input type="file" accept=".pdf" onChange={e => setStoryDetails(s => ({ ...s, storyPdf: e.target.files?.[0] || null }))} /></div>
+                  )}
+                  <div className="flex gap-4">
+                    <Button onClick={handlePrev} variant="outline">Back</Button>
+                    <Button onClick={handleNext} className="flex-1 h-12">Next</Button>
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 5 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                  <h2 className="text-2xl font-bold text-center">Review & Submit</h2>
+                  <div className="bg-muted p-4 rounded-xl space-y-2 text-sm italic">
+                    <p><strong>Event:</strong> {events.find(e => e.id === selectedEventId)?.name}</p>
+                    <p><strong>Title:</strong> {storyDetails.title}</p>
+                    <p><strong>Category:</strong> {storyDetails.category}</p>
+                    {role === 'school' && <p><strong>Class:</strong> {storyDetails.classLevel}</p>}
+                    <p><strong>Key:</strong> {uniqueKey}</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <Button onClick={handlePrev} variant="outline">Back</Button>
+                    <Button onClick={handleNext} disabled={isSubmitting} className="flex-1 h-12">
+                      {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : <Check className="mr-2" />}
+                      Submit Registration
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           )}
-
-          {currentStep === 2 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold text-center">Verify Your Key</h2>
-              <div className="space-y-2">
-                <Label>Unique Key</Label>
-                <Input value={uniqueKey} onChange={e => setUniqueKey(e.target.value.toUpperCase())} placeholder="Enter your key" className="h-14 text-center text-xl tracking-widest font-mono" />
-              </div>
-              <div className="flex gap-4">
-                <Button onClick={handlePrev} variant="ghost">Back</Button>
-                <Button onClick={handleNext} disabled={!uniqueKey} className="flex-1 h-12">Verify & Continue</Button>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 3 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold text-center">Select Role</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <Button onClick={() => setRole('school')} variant={role === 'school' ? 'default' : 'outline'} className="h-24 flex-col gap-2">
-                  <School /> School
-                </Button>
-                <Button onClick={() => setRole('college')} variant={role === 'college' ? 'default' : 'outline'} className="h-24 flex-col gap-2">
-                  <GraduationCap /> College
-                </Button>
-              </div>
-              <div className="flex gap-4">
-                <Button onClick={handlePrev} variant="ghost">Back</Button>
-                <Button onClick={handleNext} disabled={!role} className="flex-1 h-12">Next</Button>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 4 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold">Story Details</h2>
-              <div className="space-y-2"><Label>Story Title</Label><Input value={storyDetails.title} onChange={e => setStoryDetails(s => ({ ...s, title: e.target.value }))} /></div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={storyDetails.category} onValueChange={v => setStoryDetails(s => ({ ...s, category: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fiction">Fiction</SelectItem>
-                    <SelectItem value="non-fiction">Non-Fiction</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <textarea className="w-full h-32 p-3 rounded-md border" value={storyDetails.description} onChange={e => setStoryDetails(s => ({ ...s, description: e.target.value }))} />
-              </div>
-              {role === 'school' ? (
-                <div className="space-y-2">
-                  <Label>Class Level</Label>
-                  <Input value={storyDetails.classLevel} onChange={e => setStoryDetails(s => ({ ...s, classLevel: e.target.value }))} placeholder="e.g. 10th Grade" />
-                  <Label className="mt-4 block">Upload Video</Label>
-                  <Input type="file" onChange={e => setStoryDetails(s => ({ ...s, videoFile: e.target.files?.[0] || null }))} />
-                </div>
-              ) : (
-                <div className="space-y-2"><Label>Upload PDF</Label><Input type="file" accept=".pdf" onChange={e => setStoryDetails(s => ({ ...s, storyPdf: e.target.files?.[0] || null }))} /></div>
-              )}
-              <div className="flex gap-4">
-                <Button onClick={handlePrev} variant="outline">Back</Button>
-                <Button onClick={handleNext} className="flex-1 h-12">Next</Button>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 5 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold text-center">Review & Submit</h2>
-              <div className="bg-muted p-4 rounded-xl space-y-2 text-sm italic">
-                <p><strong>Event:</strong> {events.find(e => e.id === selectedEventId)?.name}</p>
-                <p><strong>Title:</strong> {storyDetails.title}</p>
-                <p><strong>Category:</strong> {storyDetails.category}</p>
-                {role === 'school' && <p><strong>Class:</strong> {storyDetails.classLevel}</p>}
-                <p><strong>Key:</strong> {uniqueKey}</p>
-              </div>
-              <div className="flex gap-4">
-                <Button onClick={handlePrev} variant="outline">Back</Button>
-                <Button onClick={handleNext} disabled={isSubmitting} className="flex-1 h-12">
-                  {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : <Check className="mr-2" />}
-                  Submit Registration
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

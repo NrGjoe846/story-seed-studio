@@ -70,7 +70,7 @@ export const EventsSection = () => {
 
             const existingReg = reg || clgReg;
             if (existingReg) {
-              if (existingReg.story_title) userStatus = 'registered';
+              if (existingReg.story_title && existingReg.story_title !== 'Pending Registration') userStatus = 'registered';
               else if (existingReg.payment_status === 'paid') userStatus = 'paid';
             }
           }
