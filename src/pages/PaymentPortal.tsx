@@ -128,12 +128,20 @@ const PaymentPortal = () => {
         return;
       }
 
-      // 1. Create Order
+      // 1. Validate registration fee
+      if (!event.registration_fee || event.registration_fee <= 0) {
+        toast({ title: 'Error', description: 'Event registration fee not set. Please contact support.', variant: 'destructive' });
+        setSubmitting(false);
+        return;
+      }
+
+      // 2. Create Order
       const { data: orderData, error: orderError } = await supabase.functions.invoke('razorpay-handler', {
-        body: { action: 'create-order', amount: event.registration_fee * 100 }, // Amount in paisa
+        body: { action: 'create-order', amount: Math.round(event.registration_fee * 100) }, // Amount in paisa
       });
 
       if (orderError || !orderData?.id) {
+        console.error('Order creation error:', orderError);
         throw new Error(orderError?.message || 'Failed to create order');
       }
 
