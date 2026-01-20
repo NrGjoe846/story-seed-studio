@@ -322,6 +322,7 @@ export type Database = {
           winner_id: string | null
           payment_deadline: string | null
           registration_start_date: string | null
+          registration_fee: number | null
         }
         Insert: {
           banner_image?: string | null
@@ -345,6 +346,7 @@ export type Database = {
           winner_id?: string | null
           payment_deadline?: string | null
           registration_start_date?: string | null
+          registration_fee?: number | null
         }
         Update: {
           banner_image?: string | null
@@ -368,6 +370,7 @@ export type Database = {
           winner_id?: string | null
           payment_deadline?: string | null
           registration_start_date?: string | null
+          registration_fee?: number | null
         }
         Relationships: [
           {

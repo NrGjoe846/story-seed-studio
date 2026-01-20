@@ -39,6 +39,7 @@ interface Event {
   qr_code_url: string | null;
   voting_open: boolean | null;
   event_type: 'school' | 'college' | 'both' | null;
+  registration_fee: number | null;
   participantCount?: number;
   voteCount?: number;
 }
@@ -609,38 +610,16 @@ const AdminCompetitions = () => {
                 {editEvent.is_payment_enabled && (
                   <div className="space-y-3 pl-7 animate-fade-in">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Upload QR Code for Payment</label>
-                      <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) setQrCodeFile(file);
-                          }}
-                          className="hidden"
-                          id="qr-upload"
-                        />
-                        <label htmlFor="qr-upload" className="cursor-pointer">
-                          {qrCodeFile ? (
-                            <div className="flex items-center justify-center gap-2 text-green-600">
-                              <Check className="w-5 h-5" />
-                              <span className="text-sm">{qrCodeFile.name}</span>
-                            </div>
-                          ) : editEvent.qr_code_url ? (
-                            <div className="space-y-2">
-                              <img src={editEvent.qr_code_url} alt="Current QR" className="w-32 h-32 mx-auto object-contain" />
-                              <p className="text-xs text-center text-muted-foreground">Click to change QR code</p>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-center gap-2 text-center">
-                              <Upload className="w-8 h-8 text-muted-foreground" />
-                              <p className="text-sm text-muted-foreground">Click to upload QR code</p>
-                              <p className="text-xs text-muted-foreground">PNG, JPG (max 5MB)</p>
-                            </div>
-                          )}
-                        </label>
-                      </div>
+                      <label className="text-sm font-medium">Registration Fee (₹)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={editEvent.registration_fee || ''}
+                        onChange={(e) => setEditEvent({ ...editEvent, registration_fee: parseFloat(e.target.value) || null })}
+                        placeholder="Enter amount (e.g., 99)"
+                      />
+                      <p className="text-xs text-muted-foreground">This amount will be charged via Razorpay.</p>
                     </div>
                   </div>
                 )}
