@@ -142,9 +142,9 @@ const PaymentPortal = () => {
         phone: personalInfo.phone,
         age: parseInt(personalInfo.age),
         city: personalInfo.city,
-        story_title: null,
-        category: null,
-        story_description: null,
+        story_title: '',
+        category: '',
+        story_description: '',
       };
 
       if (personalInfo.role === 'school') {
