@@ -3,8 +3,8 @@ import { BookOpen, Mic, Upload, CheckCircle, Award } from 'lucide-react';
 const steps = [
     {
         number: '01',
-        title: 'Choose a Topic',
-        description: 'Kids select from our themed storytelling categories',
+        title: 'Topic of the Event',
+        description: 'Begin Your Story from the Given Topic',
         icon: BookOpen,
     },
     {
