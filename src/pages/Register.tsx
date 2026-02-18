@@ -298,10 +298,10 @@ const Register = () => {
       const fileName = `${registrationId}-${Date.now()}.${fileExt}`;
       const { error } = await supabase.storage.from('story-videos').upload(fileName, videoFile);
       if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from('story-videos').getPublicUrl(fileName);
-      await supabase.from('registrations').update({ yt_link: publicUrl }).eq('id', registrationId);
+      // Store just the file path (not full public URL) so signed URLs can be generated
+      await supabase.from('registrations').update({ yt_link: fileName }).eq('id', registrationId);
       setUploadStatus('complete');
-      return publicUrl;
+      return fileName;
     } catch (error) {
       console.error(error);
       setUploadStatus('error');

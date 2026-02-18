@@ -135,23 +135,28 @@ const JudgeSubmissions = () => {
 
   const getSignedVideoUrl = async (url: string): Promise<string> => {
     if (!url) return '';
-    // If it's a YouTube URL, return as-is
+    // YouTube links — return as-is
     if (url.includes('youtube.com') || url.includes('youtu.be')) return url;
-    // Extract the file path from the Supabase storage public URL
-    // URL format: https://<project>.supabase.co/storage/v1/object/public/story-videos/<filename>
+
     try {
+      // Determine the file path:
+      // New records store just the filename: "abc-123.mp4"
+      // Old records may store the full public URL: "https://.../story-videos/abc-123.mp4"
+      let filePath = url;
       const match = url.match(/\/storage\/v1\/object\/(?:public|sign)\/story-videos\/(.+)/);
       if (match) {
-        const filePath = match[1].split('?')[0]; // strip any existing query params
-        const { data, error } = await supabase.storage
-          .from('story-videos')
-          .createSignedUrl(filePath, 3600); // 1 hour
-        if (!error && data?.signedUrl) return data.signedUrl;
+        filePath = match[1].split('?')[0]; // strip query params from old full URLs
       }
+
+      const { data, error } = await supabase.storage
+        .from('story-videos')
+        .createSignedUrl(filePath, 3600); // 1-hour signed URL
+
+      if (!error && data?.signedUrl) return data.signedUrl;
     } catch (e) {
       console.error('Failed to create signed URL:', e);
     }
-    return url; // fallback to original
+    return url; // fallback
   };
 
   const handleOpenVoting = async (participant: Participant) => {
@@ -328,8 +333,8 @@ const JudgeSubmissions = () => {
               <div
                 key={participant.id}
                 className={`flex items-center gap-3 rounded-xl border p-3 ${participant.hasVoted
-                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-                    : 'bg-muted/40 border-border/60'
+                  ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                  : 'bg-muted/40 border-border/60'
                   }`}
               >
                 <Avatar className="w-10 h-10">
