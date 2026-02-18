@@ -620,7 +620,7 @@ const AdminCompetitions = () => {
                         onChange={(e) => setEditEvent({ ...editEvent, registration_fee: parseFloat(e.target.value) || null })}
                         placeholder="Enter amount (e.g., 99)"
                       />
-                      <p className="text-xs text-muted-foreground">This amount will be charged via Razorpay.</p>
+                      <p className="text-xs text-muted-foreground">This amount will be charged via Zoho Payments.</p>
                     </div>
                   </div>
                 )}

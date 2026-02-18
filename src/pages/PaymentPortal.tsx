@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
-    Razorpay: any;
+    ZPayments: any;
   }
 }
 
@@ -117,99 +117,54 @@ const PaymentPortal = () => {
     return true;
   };
 
-  const handleRazorpayPayment = async () => {
-    try {
-      setSubmitting(true); // Use submitting for payment process
+  const isEventFree = !event?.is_payment_enabled || !event?.registration_fee || event.registration_fee <= 0;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+  const handleZohoPayment = async () => {
+    try {
+      setSubmitting(true);
+
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession) {
         toast({ title: 'Error', description: 'You must be logged in to pay.', variant: 'destructive' });
         setSubmitting(false);
         return;
       }
 
       // 1. Validate registration fee
+      if (isEventFree) {
+        // This should normally not be reachable due to bypass, but added as safety
+        await submitPaymentToDB({ method: 'free' });
+        return;
+      }
+
       if (!event.registration_fee || event.registration_fee <= 0) {
         toast({ title: 'Error', description: 'Event registration fee not set. Please contact support.', variant: 'destructive' });
         setSubmitting(false);
         return;
       }
 
-      // 2. Create Order
-      const { data: orderData, error: orderError } = await supabase.functions.invoke('razorpay-handler', {
-        body: { action: 'create-order', amount: Math.round(event.registration_fee * 100) }, // Amount in paisa
+      // 2. Create Payment Link via Edge Function
+      const { data, error } = await supabase.functions.invoke('zoho-payment-handler', {
+        body: {
+          action: 'create-link',
+          amount: event.registration_fee,
+          customer_id: authSession.user.id,
+          order_id: eventId
+        },
       });
 
-      if (orderError || !orderData?.id) {
-        console.error('Order creation error:', orderError);
-        throw new Error(orderError?.message || 'Failed to create order');
+      if (error || !data?.payment_url) {
+        console.error('Link creation error:', error);
+        throw new Error(error?.message || 'Failed to create payment link');
       }
 
-      // 2. Open Razorpay Checkout
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // User needs to set this
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: "Story Seed Studio",
-        description: "Competition Registration Fee",
-        image: "/assets/logo.png",
-        order_id: orderData.id,
-        handler: async function (response: any) {
-          try {
-            // 3. Verify Signature
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('razorpay-handler', {
-              body: {
-                action: 'verify-signature',
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              },
-            });
-
-            if (verifyError || !verifyData?.success) {
-              throw new Error('Payment verification failed');
-            }
-
-            // 4. Submit Registration (Signature verified)
-            await submitPaymentToDB({
-              paymentId: response.razorpay_payment_id,
-              orderId: response.razorpay_order_id,
-              signature: response.razorpay_signature,
-              amount: event.registration_fee,
-              method: 'razorpay'
-            });
-
-          } catch (err: any) {
-            console.error('Verification Error:', err);
-            toast({ title: 'Payment Verification Failed', description: err.message, variant: 'destructive' });
-          }
-        },
-        prefill: {
-          name: `${personalInfo.firstName} ${personalInfo.lastName}`,
-          email: session.user.email,
-          contact: personalInfo.phone,
-        },
-        theme: {
-          color: "#9B1B1B",
-        },
-        modal: {
-          ondismiss: function () {
-            setSubmitting(false); // Reset submitting if modal is dismissed
-          }
-        }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        toast({ title: 'Payment Failed', description: response.error.description, variant: 'destructive' });
-        setSubmitting(false); // Reset submitting on payment failure
-      });
-      rzp.open();
+      // 3. Redirect to Zoho Hosted Page
+      window.location.href = data.payment_url;
 
     } catch (error: any) {
       console.error('Payment Error:', error);
       toast({ title: 'Payment Error', description: error.message, variant: 'destructive' });
-      setSubmitting(false); // Reset submitting on any error
+      setSubmitting(false);
     }
   };
 
@@ -231,16 +186,15 @@ const PaymentPortal = () => {
         phone: personalInfo.phone,
         age: parseInt(personalInfo.age),
         city: personalInfo.city,
-        story_title: null, // Will be filled when user submits story
-        category: null, // Will be filled when user submits story
-        story_description: null, // Will be filled when user submits story
-        payment_status: 'paid', // Update status
+        story_title: null,
+        category: null,
+        story_description: null,
+        payment_status: 'paid',
         unique_key: key,
-        payment_details: paymentDetails, // Store full Razorpay details
+        payment_details: paymentDetails,
       };
 
       if (personalInfo.role === 'school') {
-        payload.school_name = personalInfo.schoolName;
         payload.class_level = personalInfo.classLevel;
       } else {
         payload.college_name = personalInfo.collegeName;
@@ -278,6 +232,23 @@ const PaymentPortal = () => {
       setSubmitting(false);
     }
   };
+
+  // Handle return from Zoho Payment Link
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const paymentId = searchParams.get('payment_id');
+
+    if (status === 'success' && event && !submitting && step === 2) {
+      const finalizePayment = async () => {
+        setSubmitting(true);
+        await submitPaymentToDB({
+          paymentId: paymentId || 'hosted_link',
+          method: 'zoho_link'
+        });
+      };
+      finalizePayment();
+    }
+  }, [searchParams, event, step, submitting]);
 
   if (loading) {
     return (
@@ -394,11 +365,32 @@ const PaymentPortal = () => {
               )}
 
               <Button
-                onClick={() => { if (validatePersonalStep()) setStep(2); }}
+                onClick={() => {
+                  if (validatePersonalStep()) {
+                    if (isEventFree) {
+                      setSubmitting(true);
+                      submitPaymentToDB({ method: 'free' });
+                    } else {
+                      setStep(2);
+                    }
+                  }
+                }}
+                disabled={submitting}
                 className="w-full h-14 bg-primary text-white text-lg font-bold rounded-2xl"
               >
-                Continue to Payment
-                <ArrowRight className="w-6 h-6 ml-2" />
+                {submitting ? (
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                ) : isEventFree ? (
+                  <>
+                    Register for Free
+                    <Check className="w-6 h-6 ml-2" />
+                  </>
+                ) : (
+                  <>
+                    Continue to Payment
+                    <ArrowRight className="w-6 h-6 ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -407,7 +399,7 @@ const PaymentPortal = () => {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="text-center">
                 <h2 className="text-2xl font-bold mb-2">Registration Fee: ₹{event.registration_fee || 99}</h2>
-                <p className="text-muted-foreground">Secure payment via Razorpay</p>
+                <p className="text-muted-foreground">Secure payment via Zoho Payments</p>
               </div>
 
               <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
@@ -420,7 +412,7 @@ const PaymentPortal = () => {
 
               <div className="flex gap-4">
                 <Button onClick={() => setStep(1)} variant="ghost" disabled={submitting} className="h-12">Back</Button>
-                <Button onClick={handleRazorpayPayment} disabled={submitting} className="flex-1 h-12 bg-[#9B1B1B] hover:bg-[#7d1616] text-white">
+                <Button onClick={handleZohoPayment} disabled={submitting} className="flex-1 h-12 bg-[#9B1B1B] hover:bg-[#7d1616] text-white">
                   {submitting ? <Loader2 className="animate-spin mr-2" /> : 'Pay Now'}
                 </Button>
               </div>

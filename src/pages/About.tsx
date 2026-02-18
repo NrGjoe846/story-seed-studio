@@ -155,10 +155,7 @@ const About = () => {
                   We help on creating storytelling platform
                 </h2>
                 <p className="text-muted-foreground leading-relaxed text-sm sm:text-base">
-                  Story Seeds is a one-of-a-kind creative storytelling platform built to nurture the imagination, confidence, and communication skills of young children. We believe every child is born with a spark — a spark of curiosity, creativity, and the desire to express what they see, feel, and dream. Our goal is to give that spark a stage.
-                  <br />
-                  <br />
-                  At Story Seeds, we see storytelling as more than just a fun activity — it is a powerful developmental tool that shapes a child’s thinking, confidence, and emotional growth. Every child carries within them an unexplored world of ideas, feelings, and imaginations waiting to be discovered and shared. Yet, in the rush of everyday life, children rarely get the opportunity or encouragement to express these inner worlds.
+                 Story Seeds is a creative storytelling platform dedicated to nurturing children’s imagination, confidence, and communication skills. We believe every child is born with a spark of curiosity and creativity, and our mission is to give that spark a stage to shine. More than just a fun activity, storytelling at Story Seeds is a powerful developmental tool that helps shape a child’s thinking, emotional growth, and self-expression, providing them with the encouragement and space to share the rich inner worlds of ideas, feelings, and dreams they carry within.
                 </p>
               </div>
             </div>

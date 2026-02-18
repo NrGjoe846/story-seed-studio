@@ -17,6 +17,7 @@ interface EventCardProps {
         is_payment_enabled: boolean;
         payment_deadline: string | null;
         registration_start_date: string | null;
+        registration_fee: number | null;
         participantCount: number;
         status: 'live' | 'upcoming' | 'ended';
         event_type?: 'school' | 'college' | 'both';
@@ -38,7 +39,9 @@ export const EventCard = ({ event, index = 0 }: EventCardProps) => {
         return startDate;
     };
 
-    const isPayEnabled = event.is_payment_enabled &&
+    const isFree = !event.registration_fee || event.registration_fee <= 0;
+
+    const isPayEnabled = (event.is_payment_enabled || !isFree) &&
         (!event.payment_deadline || now < new Date(event.payment_deadline));
 
     const isRegEnabled = event.registration_open ||
@@ -164,11 +167,11 @@ export const EventCard = ({ event, index = 0 }: EventCardProps) => {
                                     );
                                 }
 
-                                if (isPayEnabled) {
+                                if (isPayEnabled || isFree) {
                                     return (
                                         <Link to={`/pay-event/${event.id}`} className="flex-1">
                                             <Button variant="hero" className="w-full group bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90 h-11">
-                                                Register Now
+                                                {isFree ? 'Register Now' : 'Register Now'}
                                                 <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                                             </Button>
                                         </Link>

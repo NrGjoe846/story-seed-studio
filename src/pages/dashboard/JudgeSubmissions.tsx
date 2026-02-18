@@ -48,6 +48,7 @@ const JudgeSubmissions = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
   const [judgeComment, setJudgeComment] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string>('');
 
   const fetchEvents = async () => {
     if (!user?.id) return;
@@ -132,12 +133,41 @@ const JudgeSubmissions = () => {
     setIsParticipantsOpen(true);
   };
 
-  const handleOpenVoting = (participant: Participant) => {
+  const getSignedVideoUrl = async (url: string): Promise<string> => {
+    if (!url) return '';
+    // YouTube links — return as-is
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return url;
+
+    try {
+      // Determine the file path:
+      // New records store just the filename: "abc-123.mp4"
+      // Old records may store the full public URL: "https://.../story-videos/abc-123.mp4"
+      let filePath = url;
+      const match = url.match(/\/storage\/v1\/object\/(?:public|sign)\/story-videos\/(.+)/);
+      if (match) {
+        filePath = match[1].split('?')[0]; // strip query params from old full URLs
+      }
+
+      const { data, error } = await supabase.storage
+        .from('story-videos')
+        .createSignedUrl(filePath, 3600); // 1-hour signed URL
+
+      if (!error && data?.signedUrl) return data.signedUrl;
+    } catch (e) {
+      console.error('Failed to create signed URL:', e);
+    }
+    return url; // fallback
+  };
+
+  const handleOpenVoting = async (participant: Participant) => {
     setSelectedParticipant(participant);
     setIsVotingOpen(true);
     setVoteScore([50]);
     setVideoProgress([0]);
     setJudgeComment('');
+    setResolvedVideoUrl(''); // reset while loading
+    // Resolve the video URL (signed URL for private bucket)
+    getSignedVideoUrl(participant.videoUrl).then(setResolvedVideoUrl);
   };
 
   const handleSubmitVote = async () => {
@@ -243,7 +273,7 @@ const JudgeSubmissions = () => {
   return (
     <div className="space-y-6 page-enter">
       <h1 className="font-display text-2xl font-bold text-foreground">Event Submissions</h1>
-      
+
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -302,11 +332,10 @@ const JudgeSubmissions = () => {
             {selectedEvent?.participants?.map((participant) => (
               <div
                 key={participant.id}
-                className={`flex items-center gap-3 rounded-xl border p-3 ${
-                  participant.hasVoted 
-                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
-                    : 'bg-muted/40 border-border/60'
-                }`}
+                className={`flex items-center gap-3 rounded-xl border p-3 ${participant.hasVoted
+                  ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                  : 'bg-muted/40 border-border/60'
+                  }`}
               >
                 <Avatar className="w-10 h-10">
                   <AvatarImage src={participant.photo} alt={participant.name} />
@@ -353,10 +382,10 @@ const JudgeSubmissions = () => {
             <div className="space-y-6 mt-4">
               {/* Video Section */}
               <div className="relative w-full bg-black rounded-xl overflow-hidden aspect-video">
-                {selectedParticipant.videoUrl ? (
-                  isYouTubeUrl(selectedParticipant.videoUrl) ? (
+                {resolvedVideoUrl ? (
+                  isYouTubeUrl(resolvedVideoUrl) ? (
                     <iframe
-                      src={getVideoEmbedUrl(selectedParticipant.videoUrl)}
+                      src={getVideoEmbedUrl(resolvedVideoUrl)}
                       className="w-full h-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -364,13 +393,17 @@ const JudgeSubmissions = () => {
                   ) : (
                     <video
                       ref={videoRef}
-                      src={selectedParticipant.videoUrl}
+                      src={resolvedVideoUrl}
                       className="w-full h-full object-contain bg-black"
                       controls
                       controlsList="nodownload"
                       playsInline
                     />
                   )
+                ) : selectedParticipant?.videoUrl ? (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                  </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                     No video available

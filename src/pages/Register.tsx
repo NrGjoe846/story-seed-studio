@@ -288,14 +288,20 @@ const Register = () => {
   const uploadVideoToSupabase = async (videoFile: File, registrationId: string) => {
     try {
       setUploadStatus('uploading');
+      const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
+      if (videoFile.size > MAX_VIDEO_SIZE) {
+        toast({ title: 'File Too Large', description: 'Video must be under 50 MB.', variant: 'destructive' });
+        setUploadStatus('error');
+        return null;
+      }
       const fileExt = videoFile.name.split('.').pop() || 'mp4';
       const fileName = `${registrationId}-${Date.now()}.${fileExt}`;
       const { error } = await supabase.storage.from('story-videos').upload(fileName, videoFile);
       if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from('story-videos').getPublicUrl(fileName);
-      await supabase.from('registrations').update({ yt_link: publicUrl }).eq('id', registrationId);
+      // Store just the file path (not full public URL) so signed URLs can be generated
+      await supabase.from('registrations').update({ yt_link: fileName }).eq('id', registrationId);
       setUploadStatus('complete');
-      return publicUrl;
+      return fileName;
     } catch (error) {
       console.error(error);
       setUploadStatus('error');
@@ -633,7 +639,19 @@ const Register = () => {
                       </div>
                       <div className="space-y-2">
                         <Label>Upload Video</Label>
-                        <Input type="file" onChange={e => setStoryDetails(s => ({ ...s, videoFile: e.target.files?.[0] || null }))} />
+                        <Input
+                          type="file"
+                          accept="video/*"
+                          onChange={e => {
+                            const file = e.target.files?.[0] || null;
+                            if (file && file.size > 50 * 1024 * 1024) {
+                              toast({ title: 'File Too Large', description: 'Video must be under 50 MB.', variant: 'destructive' });
+                              e.target.value = '';
+                              return;
+                            }
+                            setStoryDetails(s => ({ ...s, videoFile: file }));
+                          }}
+                        />
                       </div>
                     </div>
                   ) : (
