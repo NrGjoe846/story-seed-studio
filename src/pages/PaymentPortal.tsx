@@ -195,7 +195,6 @@ const PaymentPortal = () => {
       };
 
       if (personalInfo.role === 'school') {
-        payload.school_name = personalInfo.schoolName;
         payload.class_level = personalInfo.classLevel;
       } else {
         payload.college_name = personalInfo.collegeName;
