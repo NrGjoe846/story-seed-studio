@@ -94,23 +94,6 @@ const PaymentPortal = () => {
     checkAuthAndFetchEvent();
   }, [eventId, navigate, toast]);
 
-  // Handle return from Zoho Payment Link
-  useEffect(() => {
-    const status = searchParams.get('status');
-    const paymentId = searchParams.get('payment_id');
-
-    if (status === 'success' && event && !submitting && step === 2) {
-      const finalizePayment = async () => {
-        setSubmitting(true);
-        await submitPaymentToDB({
-          paymentId: paymentId || 'hosted_link',
-          method: 'zoho_link'
-        });
-      };
-      finalizePayment();
-    }
-  }, [searchParams, event, step]);
-
   const validatePersonalStep = () => {
     const { firstName, lastName, phone, age, city, role } = personalInfo;
     if (!firstName || !lastName || !phone || !age || !city || !role) {
@@ -134,6 +117,8 @@ const PaymentPortal = () => {
     return true;
   };
 
+  const isEventFree = !event?.is_payment_enabled || !event?.registration_fee || event.registration_fee <= 0;
+
   const handleZohoPayment = async () => {
     try {
       setSubmitting(true);
@@ -146,6 +131,12 @@ const PaymentPortal = () => {
       }
 
       // 1. Validate registration fee
+      if (isEventFree) {
+        // This should normally not be reachable due to bypass, but added as safety
+        await submitPaymentToDB({ method: 'free' });
+        return;
+      }
+
       if (!event.registration_fee || event.registration_fee <= 0) {
         toast({ title: 'Error', description: 'Event registration fee not set. Please contact support.', variant: 'destructive' });
         setSubmitting(false);
@@ -242,6 +233,23 @@ const PaymentPortal = () => {
       setSubmitting(false);
     }
   };
+
+  // Handle return from Zoho Payment Link
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const paymentId = searchParams.get('payment_id');
+
+    if (status === 'success' && event && !submitting && step === 2) {
+      const finalizePayment = async () => {
+        setSubmitting(true);
+        await submitPaymentToDB({
+          paymentId: paymentId || 'hosted_link',
+          method: 'zoho_link'
+        });
+      };
+      finalizePayment();
+    }
+  }, [searchParams, event, step, submitting]);
 
   if (loading) {
     return (
@@ -358,11 +366,32 @@ const PaymentPortal = () => {
               )}
 
               <Button
-                onClick={() => { if (validatePersonalStep()) setStep(2); }}
+                onClick={() => {
+                  if (validatePersonalStep()) {
+                    if (isEventFree) {
+                      setSubmitting(true);
+                      submitPaymentToDB({ method: 'free' });
+                    } else {
+                      setStep(2);
+                    }
+                  }
+                }}
+                disabled={submitting}
                 className="w-full h-14 bg-primary text-white text-lg font-bold rounded-2xl"
               >
-                Continue to Payment
-                <ArrowRight className="w-6 h-6 ml-2" />
+                {submitting ? (
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                ) : isEventFree ? (
+                  <>
+                    Register for Free
+                    <Check className="w-6 h-6 ml-2" />
+                  </>
+                ) : (
+                  <>
+                    Continue to Payment
+                    <ArrowRight className="w-6 h-6 ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           )}

@@ -19,6 +19,7 @@ interface Event {
   is_payment_enabled: boolean;
   payment_deadline: string | null;
   registration_start_date: string | null;
+  registration_fee: number | null;
   participantCount: number;
   status: 'live' | 'upcoming' | 'ended';
   event_type: 'school' | 'college' | 'both';
@@ -102,6 +103,7 @@ const Events = () => {
             registration_open: event.registration_open === true,
             payment_deadline: event.payment_deadline,
             registration_start_date: event.registration_start_date,
+            registration_fee: event.registration_fee,
             participantCount: count || 0,
             status,
             event_type: (event as any).event_type || 'both',
