@@ -92,8 +92,8 @@ const Contact = () => {
                 <div>
                   <h3 className="font-semibold text-foreground mb-1 text-sm sm:text-base">Our Location</h3>
                   <p className="text-muted-foreground text-sm sm:text-base">
-                    36/11 Bose St, Krishnamoorthy Nagar<br />
-                    Kodungaiyur East, Chennai 600 118
+                    Story Seed Studio, Chennai<br />
+                    Tamilnadu, India
                   </p>
                 </div>
               </div>
