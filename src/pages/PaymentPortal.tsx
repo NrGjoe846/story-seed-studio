@@ -425,8 +425,8 @@ const PaymentPortal = () => {
                 <Check className="w-10 h-10 text-green-600" />
               </div>
               <div>
-                <h2 className="text-3xl font-bold mb-2">Payment Successful!</h2>
-                <p className="text-muted-foreground">Your transaction has been recorded and is pending verification.</p>
+                <h2 className="text-3xl font-bold mb-2">Registration Successful!</h2>
+                <p className="text-muted-foreground">Your registration has been recorded and is pending verification.</p>
               </div>
 
               <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 space-y-4">
