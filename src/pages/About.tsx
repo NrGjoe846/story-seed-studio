@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { CircularTestimonials } from '@/components/ui/circular-testimonials';
 import logoImage from '@/assets/logo.png';
 
+// trigger rebuild
+
 const About = () => {
   const [activeTab, setActiveTab] = useState<'mission' | 'vision' | 'values'>('mission');
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
