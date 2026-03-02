@@ -38,11 +38,11 @@ async function getZohoAccessToken() {
             console.warn(`Zoho OAuth refresh failed (Status ${response.status}):`, responseText);
 
             // Fallback: If it's a 4xx error but the token looks like a static key, try using it directly
-            if (refreshToken.startsWith('1002.')) {
+            if (refreshToken && (refreshToken.startsWith('1002.') || refreshToken.startsWith('1003.'))) {
                 console.log('OAuth failed, falling back to using token directly as a static key');
                 return refreshToken;
             }
-            throw new Error(`Failed to get Zoho access token: ${responseText}`);
+            throw new Error(`Failed to get Zoho access token (Status ${response.status}): ${responseText}`);
         }
 
         const data: ZohoTokenResponse = JSON.parse(responseText);
