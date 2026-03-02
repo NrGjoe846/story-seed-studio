@@ -36,7 +36,6 @@ export const Navbar = () => {
     role
   } = useAuth();
   const [hoveredPath, setHoveredPath] = useState(location.pathname);
-  const [isBannerVisible, setIsBannerVisible] = useState(true);
   useEffect(() => {
     setHoveredPath(location.pathname);
   }, [location.pathname]);
@@ -231,43 +230,10 @@ export const Navbar = () => {
     });
   };
   return <>
-    <AnimatePresence>
-      {isBannerVisible && <motion.div initial={{
-        height: 0,
-        opacity: 0
-      }} animate={{
-        height: 'auto',
-        opacity: 1
-      }} exit={{
-        height: 0,
-        opacity: 0
-      }} className="fixed top-0 left-0 right-0 z-[60] bg-gradient-hero text-primary-foreground relative overflow-hidden">
-        <div className="absolute inset-0 shimmer"></div>
-        <div className="container mx-auto px-4 max-w-7xl py-2 flex items-center justify-center gap-4 relative">
-
-          <p className="text-xs sm:text-sm font-medium text-center">
-            🎉 Summer Storytelling Championship 2025 is now LIVE! Register today.
-          </p>
-          <button className="text-primary-foreground/80 hover:text-primary-foreground text-xs underline ml-2">
-            Next
-          </button>
-          <button
-            onClick={() => setIsBannerVisible(false)}
-            className="absolute right-4 p-1 hover:bg-primary-foreground/20 rounded transition-colors"
-            aria-label="Close announcement"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </motion.div>}
-    </AnimatePresence>
-
     <nav style={{
       transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
-    }} className={cn('fixed left-0 right-0 z-50 border-b',
-      // When scrolled, always move to top-0 (hide banner behind navbar)
-      // When not scrolled, respect banner visibility
-      scrolled ? 'top-0' : isBannerVisible ? 'top-[40px]' : 'top-0', scrolled ? 'py-2 bg-white backdrop-blur-lg border-border/60 shadow-md' : 'py-4 bg-transparent border-transparent shadow-none')}>
+    }} className={cn('fixed top-0 left-0 right-0 z-50 border-b',
+      scrolled ? 'py-2 bg-white backdrop-blur-lg border-border/60 shadow-md' : 'py-4 bg-transparent border-transparent shadow-none')}>
       <div className="container mx-auto px-3 sm:px-4 max-w-7xl">
         <div className="flex items-center justify-between">
           {/* Logo */}
