@@ -155,16 +155,21 @@ const PaymentPortal = () => {
       });
 
       if (error || !data?.payment_url) {
-        console.error('Link creation error:', error);
-        throw new Error(error?.message || 'Failed to create payment link');
+        console.error('Link creation error details:', data);
+        const errorMsg = data?.error || error?.message || 'Failed to create payment link';
+        throw new Error(errorMsg);
       }
 
       // 3. Redirect to Zoho Hosted Page
       window.location.href = data.payment_url;
 
     } catch (error: any) {
-      console.error('Payment Error:', error);
-      toast({ title: 'Payment Error', description: error.message, variant: 'destructive' });
+      console.error('Payment Error Flow:', error);
+      toast({
+        title: 'Payment Error',
+        description: error.message || 'An unexpected error occurred during payment link creation.',
+        variant: 'destructive'
+      });
       setSubmitting(false);
     }
   };
