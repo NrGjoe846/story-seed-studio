@@ -107,17 +107,20 @@ serve(async (req: Request) => {
 
         if (action === 'create-link') {
             const accessToken = await getZohoAccessToken();
-            const linkUrl = `https://payments.zoho.in/api/v1/paymentlinks`;
+            // Zoho Payments API v1 expects 'account_id' instead of 'organization_id'
+            const accountId = Deno.env.get('ZOHO_PAYMENTS_ACCOUNT_ID') || orgId;
+            const linkUrl = `https://payments.zoho.in/api/v1/paymentlinks?account_id=${accountId}`;
 
             const payload = {
                 amount: parseFloat(amount),
-                currency_code: currency,
-                organization_id: orgId,
+                currency: currency, // Zoho Payments uses 'currency' instead of 'currency_code'
                 email: email || 'customer@storyseed.in',
                 return_url: `${req.headers.get('origin')}/pay-event/${order_id}?status=success`,
                 reference_id: `${order_id}_${Date.now()}`,
                 description: `Payment for Event ${order_id}`
             };
+
+            console.log('Creating Zoho Payment Link with payload:', payload);
 
             const response = await fetch(linkUrl, {
                 method: 'POST',
@@ -131,9 +134,15 @@ serve(async (req: Request) => {
             const linkData = await response.json();
 
             if (!response.ok) {
-                console.error('Zoho API Error (Link):', linkData);
+                console.error('Zoho API Error (Link):', {
+                    status: response.status,
+                    data: linkData
+                });
                 return new Response(
-                    JSON.stringify({ error: linkData.message || 'Failed to create payment link' }),
+                    JSON.stringify({
+                        error: linkData.message || 'Failed to create payment link',
+                        details: linkData
+                    }),
                     { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                 )
             }
