@@ -120,13 +120,15 @@ const PaymentPortal = () => {
       const reg = existingReg || existingClgReg;
 
       if (reg && reg.payment_status === 'paid') {
-        console.log('User already registered, jumping to Step 3');
+        console.log('User already registered, jumping to Register');
         setUniqueKey(reg.unique_key);
+        const userRole = existingReg ? 'school' : 'college';
         setPersonalInfo(prev => ({
           ...prev,
-          role: existingReg ? 'school' : 'college'
+          role: userRole
         }));
-        setStep(3);
+        navigate(`/register?eventId=${eventId}&key=${reg.unique_key}`);
+        return;
       } else {
         // Auto-set role if fixed for new registrations
         if (data.event_type === 'school') {
@@ -306,21 +308,11 @@ const PaymentPortal = () => {
       // 1. Clear URL parameters immediately after success so they don't re-trigger on refresh/back
       setSearchParams({});
 
-      // 2. Dynamic Redirection Logic
-      const now = new Date();
-      const isRegOpen = event.registration_open ||
-        (event.registration_start_date && now > new Date(event.registration_start_date));
-
-      if (isRegOpen) {
-        toast({ title: 'Success', description: 'Redirecting to story submission...', });
-        // Small delay so they see the success message
-        setTimeout(() => {
-          navigate(`/register?eventId=${eventId}&key=${key}`);
-        }, 1500);
-      } else {
-        setStep(3);
-        toast({ title: 'Success', description: 'Payment successful! Unique key generated.', });
-      }
+      // 2. Dynamic Redirection Logic - Always redirect to /register if they just paid
+      toast({ title: 'Success', description: 'Payment successful! Redirecting to submission...', });
+      setTimeout(() => {
+        navigate(`/register?eventId=${eventId}&key=${key}`);
+      }, 1500);
     } catch (error: any) {
       console.error('DB Insert Error:', error);
       toast({ title: 'Registration Failed', description: error.message + ' (Payment was successful, please contact support)', variant: 'destructive' });

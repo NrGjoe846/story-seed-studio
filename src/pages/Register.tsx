@@ -209,10 +209,17 @@ const Register = () => {
           setCurrentStep(3);
         }
       } else {
-        setCurrentStep(2);
+        // For paid events: if we have a key and role, skip to step 4
+        if (uniqueKey && role) {
+          setCurrentStep(4);
+        } else if (uniqueKey) {
+          setCurrentStep(3); // Need role if not auto-determined
+        } else {
+          setCurrentStep(2);
+        }
       }
     }
-  }, [emailStep, selectedEventId, events, role, currentStep]);
+  }, [emailStep, selectedEventId, events, role, currentStep, uniqueKey]);
 
   useEffect(() => {
     const autoFetchKey = async () => {
@@ -561,16 +568,19 @@ const Register = () => {
   const handlePrev = () => {
     if (currentStep > 1) {
       const event = events.find(e => e.id === selectedEventId);
-      const isFree = event?.is_payment_enabled === false;
+      const isFree = event?.is_payment_enabled === false || !event?.registration_fee || Number(event?.registration_fee) <= 0;
 
-      if (currentStep === 4 && isFree) {
-        // Decide if we go back to 3 or 1
-        if (event?.event_type === 'school' || event?.event_type === 'college') {
-          setCurrentStep(1);
+      if (currentStep === 4) {
+        if (uniqueKey || isFree) {
+          if (role || event?.event_type === 'school' || event?.event_type === 'college') {
+            setCurrentStep(1);
+          } else {
+            setCurrentStep(3);
+          }
         } else {
           setCurrentStep(3);
         }
-      } else if (currentStep === 3 && isFree) {
+      } else if (currentStep === 3) {
         setCurrentStep(1);
       } else {
         setCurrentStep(currentStep - 1);
@@ -603,20 +613,31 @@ const Register = () => {
           <h1 className="text-4xl font-bold mb-4">Join the Competition</h1>
           <p className="text-muted-foreground">
             Complete your registration in {
-              steps.filter(s =>
-                (s.id !== 3 || !role) &&
-                (s.id !== 2 || !isFree)
-              ).length
+              steps.filter(s => {
+                const event = events.find(e => e.id === selectedEventId);
+                const isFree = event?.is_payment_enabled === false || !event?.registration_fee || Number(event?.registration_fee) <= 0;
+
+                // If it's step 2 (Key) and (it's free OR key exists), skip it from progress bar
+                if (s.id === 2 && (isFree || uniqueKey)) return false;
+
+                // If it's step 3 (Role) and (role is already set/determined), skip it
+                if (s.id === 3 && (role || event?.event_type === 'school' || event?.event_type === 'college')) return false;
+
+                return true;
+              }).length
             } steps
           </p>
         </div>
 
         <div className="relative mb-8 pb-10">
-          <div className="flex justify-between relative z-10">
-            {steps.filter(s =>
-              (s.id !== 3 || !role) &&
-              (s.id !== 2 || !isFree)
-            ).map((s, idx, filtered) => (
+          <div className="flex justify-between relative z-10 w-full">
+            {steps.filter(s => {
+              const event = events.find(e => e.id === selectedEventId);
+              const isFree = event?.is_payment_enabled === false || !event?.registration_fee || Number(event?.registration_fee) <= 0;
+              if (s.id === 2 && (isFree || uniqueKey)) return false;
+              if (s.id === 3 && (role || event?.event_type === 'school' || event?.event_type === 'college')) return false;
+              return true;
+            }).map((s, idx, filtered) => (
               <div key={s.id} className="flex flex-col items-center">
                 <div className={cn("w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-sm", currentStep >= s.id ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
                   {currentStep > s.id ? <Check className="w-5 h-5" /> : <s.icon className="w-5 h-5" />}
@@ -630,12 +651,20 @@ const Register = () => {
               className="h-full bg-primary transition-all duration-300"
               style={{
                 width: (() => {
-                  const filteredSteps = steps.filter(s =>
-                    (s.id !== 3 || !role) &&
-                    (s.id !== 2 || !isFree)
-                  );
+                  const event = events.find(e => e.id === selectedEventId);
+                  const isFree = event?.is_payment_enabled === false || !event?.registration_fee || Number(event?.registration_fee) <= 0;
+                  const filteredSteps = steps.filter(s => {
+                    if (s.id === 2 && (isFree || uniqueKey)) return false;
+                    if (s.id === 3 && (role || event?.event_type === 'school' || event?.event_type === 'college')) return false;
+                    return true;
+                  });
                   const currentIndex = filteredSteps.findIndex(s => s.id === currentStep);
-                  return `${(currentIndex / (filteredSteps.length - 1)) * 100}%`;
+                  if (currentIndex === -1 && currentStep > 1) {
+                    // If current step is hidden, find the nearest visible step after it
+                    const lastVisibleIndex = filteredSteps.reduce((acc, s, i) => s.id < currentStep ? i : acc, 0);
+                    return `${(lastVisibleIndex / (filteredSteps.length - 1)) * 100}%`;
+                  }
+                  return `${(Math.max(0, currentIndex) / (filteredSteps.length - 1)) * 100}%`;
                 })()
               }}
             />
