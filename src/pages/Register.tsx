@@ -28,6 +28,7 @@ interface Event {
   registration_deadline: string | null;
   payment_deadline: string | null;
   registration_fee: number | null;
+  submission_mode: 'individual' | 'institutional' | null;
 }
 
 const steps = [
@@ -144,7 +145,8 @@ const Register = () => {
         .select(`
           id, name, description, is_payment_enabled, 
           event_type, registration_open, registration_start_date, 
-          registration_deadline, payment_deadline, registration_fee
+          registration_deadline, payment_deadline, registration_fee,
+          submission_mode
         `)
         .eq('is_active', true);
 
@@ -896,25 +898,50 @@ const Register = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Upload Video</Label>
-                        <Input
-                          type="file"
-                          accept="video/*"
-                          onChange={e => {
-                            const file = e.target.files?.[0] || null;
-                            if (file && file.size > 50 * 1024 * 1024) {
-                              toast({ title: 'File Too Large', description: 'Video must be under 50 MB.', variant: 'destructive' });
-                              e.target.value = '';
-                              return;
-                            }
-                            setStoryDetails(s => ({ ...s, videoFile: file }));
-                          }}
-                        />
-                      </div>
+                      {selectedEvent?.submission_mode === 'institutional' ? (
+                        <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl space-y-2 animate-in fade-in zoom-in-95">
+                          <p className="text-sm text-orange-800 font-medium flex items-center gap-2">
+                            <Video className="w-4 h-4" /> Institutional Submission Mode
+                          </p>
+                          <p className="text-xs text-orange-700">
+                            Since this is an institutional event, your video submission will be handled directly by your institution. You only need to provide the story details here.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Label>Upload Video</Label>
+                          <Input
+                            type="file"
+                            accept="video/*"
+                            onChange={e => {
+                              const file = e.target.files?.[0] || null;
+                              if (file && file.size > 50 * 1024 * 1024) {
+                                toast({ title: 'File Too Large', description: 'Video must be under 50 MB.', variant: 'destructive' });
+                                e.target.value = '';
+                                return;
+                              }
+                              setStoryDetails(s => ({ ...s, videoFile: file }));
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="space-y-2"><Label>Upload PDF</Label><Input type="file" accept=".pdf" onChange={e => setStoryDetails(s => ({ ...s, storyPdf: e.target.files?.[0] || null }))} /></div>
+                    <div className="space-y-2">
+                      <Label>Upload PDF</Label>
+                      {selectedEvent?.submission_mode === 'institutional' ? (
+                        <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl space-y-2 animate-in fade-in zoom-in-95">
+                          <p className="text-sm text-orange-800 font-medium flex items-center gap-2">
+                            <FileType className="w-4 h-4" /> Institutional Submission Mode
+                          </p>
+                          <p className="text-xs text-orange-700">
+                            Since this is an institutional event, your story PDF will be handled directly by your institution. You only need to provide the story details here.
+                          </p>
+                        </div>
+                      ) : (
+                        <Input type="file" accept=".pdf" onChange={e => setStoryDetails(s => ({ ...s, storyPdf: e.target.files?.[0] || null }))} />
+                      )}
+                    </div>
                   )}
                   <div className="flex gap-4">
                     <Button onClick={handlePrev} variant="outline">Back</Button>

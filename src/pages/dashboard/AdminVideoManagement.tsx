@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Video, Trophy, AlertTriangle, CheckCircle, Eye, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { supabase, getSafeImageUrl } from '@/integrations/supabase/client';
@@ -340,10 +340,10 @@ const AdminVideoManagement = () => {
                   <tr
                     key={participant.id}
                     className={`border-t border-border/50 ${participant.isTop6
-                        ? 'bg-yellow-50 dark:bg-yellow-900/10'
-                        : participant.isTop45
-                          ? 'bg-green-50 dark:bg-green-900/10'
-                          : ''
+                      ? 'bg-yellow-50 dark:bg-yellow-900/10'
+                      : participant.isTop45
+                        ? 'bg-green-50 dark:bg-green-900/10'
+                        : ''
                       }`}
                   >
                     <td className="p-4">
@@ -433,6 +433,9 @@ const AdminVideoManagement = () => {
               <AlertTriangle className="w-5 h-5 text-destructive" />
               Confirm Video Deletion
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Warning: You are about to permanently delete videos from storage for non-qualified participants.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-muted-foreground">

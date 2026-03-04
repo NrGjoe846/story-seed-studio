@@ -6,7 +6,7 @@ import { supabase, getSafeImageUrl } from '@/integrations/supabase/client';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -378,6 +378,9 @@ const JudgeSubmissions = () => {
             <DialogTitle className="font-display text-2xl">
               {selectedParticipant?.storyTitle}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Voting and review panel for {selectedParticipant?.name}.
+            </DialogDescription>
           </DialogHeader>
 
           {selectedParticipant && (

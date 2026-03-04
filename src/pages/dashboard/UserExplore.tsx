@@ -4,6 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -69,7 +72,7 @@ const UserExplore = () => {
   useEffect(() => {
     const fetchTopRegistrations = async () => {
       setIsLoading(true);
-      
+
       // Get all events
       const { data: events } = await supabase
         .from('events')
@@ -102,16 +105,16 @@ const UserExplore = () => {
 
       // Calculate scores for each registration
       const registrationScores = new Map<string, { judgeAvg: number; userVotes: number; judgeCount: number }>();
-      
+
       (allRegistrations || []).forEach(reg => {
         const regVotes = (allVotes || []).filter(v => v.registration_id === reg.id);
         const judgeVotes = regVotes.filter(v => judgeUserIds.has(v.user_id));
         const userVotes = regVotes.filter(v => !judgeUserIds.has(v.user_id));
-        
-        const judgeAvg = judgeVotes.length > 0 
-          ? judgeVotes.reduce((sum, v) => sum + v.score, 0) / judgeVotes.length 
+
+        const judgeAvg = judgeVotes.length > 0
+          ? judgeVotes.reduce((sum, v) => sum + v.score, 0) / judgeVotes.length
           : 0;
-        
+
         registrationScores.set(reg.id, {
           judgeAvg,
           userVotes: userVotes.length,
@@ -124,25 +127,25 @@ const UserExplore = () => {
       // Get top 3 from each event for both leaderboards
       (events || []).forEach(event => {
         const eventRegs = (allRegistrations || []).filter(r => r.event_id === event.id);
-        
+
         // Top 3 by Judge Average Score (only those with judge reviews)
         const judgeTop = [...eventRegs]
           .filter(r => (registrationScores.get(r.id)?.judgeCount || 0) > 0)
           .sort((a, b) => (registrationScores.get(b.id)?.judgeAvg || 0) - (registrationScores.get(a.id)?.judgeAvg || 0))
           .slice(0, 3);
-        
+
         // Top 3 by User Votes (community)
         const communityTop = [...eventRegs]
           .sort((a, b) => (registrationScores.get(b.id)?.userVotes || 0) - (registrationScores.get(a.id)?.userVotes || 0))
           .slice(0, 3);
-        
+
         judgeTop.forEach(r => topRegistrationIds.add(r.id));
         communityTop.forEach(r => topRegistrationIds.add(r.id));
       });
 
       // Filter to only top registrations and add stats
       const topRegs = (allRegistrations || []).filter(r => topRegistrationIds.has(r.id));
-      
+
       const registrationsWithStats = await Promise.all(
         topRegs.map(async (reg) => {
           const [viewsRes, votesRes, commentsRes] = await Promise.all([
@@ -195,10 +198,10 @@ const UserExplore = () => {
 
       if (votesData) {
         const totalVotes = votesData.length;
-        const averageScore = totalVotes > 0 
-          ? votesData.reduce((sum, v) => sum + v.score, 0) / totalVotes 
+        const averageScore = totalVotes > 0
+          ? votesData.reduce((sum, v) => sum + v.score, 0) / totalVotes
           : 0;
-        const userVoteData = user?.id 
+        const userVoteData = user?.id
           ? votesData.find(v => v.user_id === user.id)
           : null;
         const userVote = userVoteData?.score || null;
@@ -227,13 +230,13 @@ const UserExplore = () => {
           .in('id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.id, { name: p.name, avatar: p.avatar }]) || []);
-        
+
         const commentsWithNames = commentsData.map(c => ({
           ...c,
           user_name: profileMap.get(c.user_id)?.name || 'Anonymous',
           user_avatar: profileMap.get(c.user_id)?.avatar
         }));
-        
+
         setComments(commentsWithNames);
       }
     };
@@ -284,7 +287,7 @@ const UserExplore = () => {
   const searchedUserStories = useMemo(() => {
     const q = query.trim();
     if (!q) return null;
-    
+
     // Check if searching by user_id
     const userStories = registrations.filter(r => r.user_id === q);
     if (userStories.length > 0) {
@@ -301,7 +304,7 @@ const UserExplore = () => {
     setVoteSubmitted(false);
     setVoteSummary({ totalVotes: 0, averageScore: 0, userVote: null, hasVoted: false });
     setComments([]);
-    
+
     // Track view if user is logged in
     if (user?.id) {
       trackView(story.id);
@@ -314,7 +317,7 @@ const UserExplore = () => {
 
   const trackView = async (registrationId: string) => {
     if (!user?.id) return;
-    
+
     try {
       // Check if user already viewed this story
       const { data: existingView } = await supabase
@@ -323,7 +326,7 @@ const UserExplore = () => {
         .eq('registration_id', registrationId)
         .eq('user_id', user.id)
         .maybeSingle();
-      
+
       if (!existingView) {
         await supabase.from('views').insert({
           registration_id: registrationId,
@@ -454,7 +457,7 @@ const UserExplore = () => {
 
   const getVideoUrl = (ytLink: string | null) => {
     if (!ytLink) return null;
-    
+
     // Handle YouTube URLs
     if (ytLink.includes('youtube.com') || ytLink.includes('youtu.be')) {
       const videoId = ytLink.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]+)/)?.[1];
@@ -462,7 +465,7 @@ const UserExplore = () => {
         return `https://www.youtube.com/embed/${videoId}`;
       }
     }
-    
+
     // Return as-is for direct video URLs
     return ytLink;
   };
@@ -524,6 +527,12 @@ const UserExplore = () => {
       {/* Video Player Dialog */}
       <Dialog open={isPlayerOpen} onOpenChange={(open) => !open && handleClosePlayer()}>
         <DialogContent className="max-w-5xl h-[90vh] md:h-[85vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{selectedStory?.story_title || 'Story Player'}</DialogTitle>
+            <DialogDescription>
+              Watch and interact with the selected story video.
+            </DialogDescription>
+          </DialogHeader>
           {selectedStory && (
             <div className="flex flex-col md:flex-row h-full overflow-hidden">
               {/* Back Button */}
@@ -534,7 +543,7 @@ const UserExplore = () => {
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm font-medium hidden sm:inline">Back to Explore</span>
               </button>
-              
+
               {/* Video Section */}
               <div className="md:w-2/3 bg-black flex flex-col min-h-0">
                 <div className="flex-1 flex items-center justify-center min-h-0 overflow-hidden">
@@ -596,9 +605,8 @@ const UserExplore = () => {
                       <button
                         type="button"
                         onClick={() => setCaptionsOn(!captionsOn)}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors ${
-                          captionsOn ? 'bg-primary text-primary-foreground' : 'bg-white/10 hover:bg-white/20'
-                        }`}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors ${captionsOn ? 'bg-primary text-primary-foreground' : 'bg-white/10 hover:bg-white/20'
+                          }`}
                       >
                         <Captions className="w-3 h-3" />
                         <span>CC</span>
@@ -620,7 +628,7 @@ const UserExplore = () => {
                   <span className="inline-block mt-2 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                     {selectedStory.category}
                   </span>
-                  
+
                   {/* Stats Row */}
                   <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1">
@@ -642,7 +650,7 @@ const UserExplore = () => {
                       </span>
                     )}
                   </div>
-                  
+
                   <p className="text-sm text-muted-foreground mt-3">
                     {selectedStory.story_description}
                   </p>
@@ -681,11 +689,10 @@ const UserExplore = () => {
                             key={num}
                             type="button"
                             onClick={() => setScore(num)}
-                            className={`w-8 h-8 rounded-full text-xs font-medium transition-all ${
-                              score >= num
+                            className={`w-8 h-8 rounded-full text-xs font-medium transition-all ${score >= num
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                            }`}
+                              }`}
                           >
                             {num}
                           </button>

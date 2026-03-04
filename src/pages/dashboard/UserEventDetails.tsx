@@ -24,6 +24,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { supabase, getSafeImageUrl } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -168,8 +169,8 @@ const UserEventDetails = () => {
         </Button>
         <span
           className={`px-3 py-1 rounded-full text-xs font-semibold ${hasEnded
-              ? 'bg-destructive text-destructive-foreground'
-              : 'bg-green-100 text-green-700'
+            ? 'bg-destructive text-destructive-foreground'
+            : 'bg-green-100 text-green-700'
             }`}
         >
           {hasEnded ? 'Event ended' : event.is_active ? 'Active event' : 'Upcoming event'}
@@ -344,6 +345,9 @@ const UserEventDetails = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Share this event</DialogTitle>
+            <DialogDescription>
+              Spread the word about this competition with your friends and family.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <div>

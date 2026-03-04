@@ -1102,50 +1102,51 @@ const Voting = () => {
       </section>
 
       {/* Modal */}
-      {isModalOpen && selectedContestant && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" style={{ top: 0 }}>
-          <div className="relative w-full max-w-2xl bg-card rounded-2xl shadow-2xl border border-border/50 max-h-[90vh] overflow-y-auto">
-            {/* Close Button */}
-            <button
-              onClick={handleCloseModal}
-              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-background transition-colors"
-            >
-              <X className="w-5 h-5 text-foreground" />
-            </button>
+      {/* Voting Modal */}
+      <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border border-border/50">
+          <DialogHeader className="sr-only">
+            <DialogTitle>
+              Vote for {selectedContestant?.first_name} {selectedContestant?.last_name}
+            </DialogTitle>
+            <DialogDescription>
+              Watch the story video and cast your vote for {selectedContestant?.first_name}.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="p-6 space-y-6">
-              {/* Video Player */}
-              <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
-                {selectedContestant.yt_link ? (
-                  isYouTubeUrl(selectedContestant.yt_link) ? (
-                    <iframe
-                      src={getYouTubeEmbedUrl(selectedContestant.yt_link) || ''}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video
-                      src={getSafeImageUrl(selectedContestant.yt_link)}
-                      className="w-full h-full object-contain bg-black"
-
-                      controls
-                      controlsList="nodownload"
-                      playsInline
-                      autoPlay={false}
-                    />
-                  )
+          <div className="p-6 space-y-6">
+            {/* Video Player */}
+            <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
+              {selectedContestant?.yt_link ? (
+                isYouTubeUrl(selectedContestant.yt_link) ? (
+                  <iframe
+                    src={getYouTubeEmbedUrl(selectedContestant.yt_link) || ''}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <Play className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">Video coming soon</p>
-                    </div>
+                  <video
+                    src={getSafeImageUrl(selectedContestant.yt_link)}
+                    className="w-full h-full object-contain bg-black"
+                    controls
+                    controlsList="nodownload"
+                    playsInline
+                    autoPlay={false}
+                  />
+                )
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <Play className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Video coming soon</p>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+            </div>
 
-              {/* Contestant Info */}
+            {/* Contestant Info */}
+            {selectedContestant && (
               <div>
                 <h2 className="font-display text-2xl font-bold text-foreground mb-2">
                   {selectedContestant.first_name} {selectedContestant.last_name}
@@ -1184,105 +1185,105 @@ const Voting = () => {
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Voter Details */}
-              <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-lg">
-                <h3 className="font-display text-xl font-semibold text-foreground mb-6">
-                  Enter Your Details to Vote
-                </h3>
+            {/* Voter Details */}
+            <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-lg">
+              <h3 className="font-display text-xl font-semibold text-foreground mb-6">
+                Enter Your Details to Vote
+              </h3>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 font-medium text-foreground">
-                      <User className="w-4 h-4" />
-                      Your Name
-                    </Label>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 font-medium text-foreground">
+                    <User className="w-4 h-4" />
+                    Your Name
+                  </Label>
+                  <Input
+                    placeholder="Enter your name"
+                    value={voterName}
+                    onChange={(e) => setVoterName(e.target.value)}
+                    className="w-full"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 font-medium text-foreground">
+                    <Phone className="w-4 h-4" />
+                    Phone Number
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
+                      <span className="text-lg">🇮🇳</span>
+                      <span className="text-sm font-medium text-foreground">+91</span>
+                    </div>
                     <Input
-                      placeholder="Enter your name"
-                      value={voterName}
-                      onChange={(e) => setVoterName(e.target.value)}
-                      className="w-full"
+                      type="tel"
+                      placeholder="98765 43210"
+                      value={voterPhone}
+                      onChange={handlePhoneChange}
+                      className="pl-20 w-full"
+                      maxLength={10}
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 font-medium text-foreground">
-                      <Phone className="w-4 h-4" />
-                      Phone Number
-                    </Label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
-                        <span className="text-lg">🇮🇳</span>
-                        <span className="text-sm font-medium text-foreground">+91</span>
-                      </div>
-                      <Input
-                        type="tel"
-                        placeholder="98765 43210"
-                        value={voterPhone}
-                        onChange={handlePhoneChange}
-                        className="pl-20 w-full"
-                        maxLength={10}
-                        required
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Enter your 10-digit mobile number
+                  <p className="text-xs text-muted-foreground">
+                    Enter your 10-digit mobile number
+                  </p>
+                </div>
+                {checkingVote && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Checking vote status...</span>
+                  </div>
+                )}
+                {!checkingVote && !canVoteStatus.canVote && canVoteStatus.reason && (
+                  <div className="bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+                    <p className="text-sm text-destructive">
+                      {canVoteStatus.reason}
                     </p>
                   </div>
-                  {checkingVote && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Checking vote status...</span>
-                    </div>
-                  )}
-                  {!checkingVote && !canVoteStatus.canVote && canVoteStatus.reason && (
-                    <div className="bg-destructive/10 p-3 rounded-lg border border-destructive/20">
-                      <p className="text-sm text-destructive">
-                        {canVoteStatus.reason}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="hero"
-                  onClick={handleVote}
-                  disabled={voting || !voterName.trim() || voterPhone.length !== 10 || !canVoteStatus.canVote}
-                  className="flex-1"
-                >
-                  {voting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Voting...
-                    </>
-                  ) : !canVoteStatus.canVote ? (
-                    <>
-                      <ThumbsUp className="w-4 h-4 mr-2" />
-                      Already Voted
-                    </>
-                  ) : (
-                    <>
-                      <ThumbsUp className="w-4 h-4 mr-2" />
-                      Vote Now
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleShare}
-                  className="flex-1"
-                >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
+                )}
               </div>
             </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="hero"
+                onClick={handleVote}
+                disabled={voting || !voterName.trim() || voterPhone.length !== 10 || !canVoteStatus.canVote}
+                className="flex-1"
+              >
+                {voting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Voting...
+                  </>
+                ) : !canVoteStatus.canVote ? (
+                  <>
+                    <ThumbsUp className="w-4 h-4 mr-2" />
+                    Already Voted
+                  </>
+                ) : (
+                  <>
+                    <ThumbsUp className="w-4 h-4 mr-2" />
+                    Vote Now
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleShare}
+                className="flex-1"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Share Modal */}
       <Dialog open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
