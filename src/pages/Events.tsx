@@ -24,6 +24,7 @@ interface Event {
   status: 'live' | 'upcoming' | 'ended';
   event_type: 'school' | 'college' | 'both';
   userStatus?: 'none' | 'paid' | 'registered';
+  submission_mode?: 'individual' | 'institutional';
 }
 
 const eventCategories = ['Live', 'All', 'Upcoming'];
@@ -108,6 +109,7 @@ const Events = () => {
             status,
             event_type: (event as any).event_type || 'both',
             userStatus,
+            submission_mode: (event as any).submission_mode || 'individual',
           };
         })
       );

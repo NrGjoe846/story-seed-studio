@@ -21,9 +21,12 @@ interface Event {
   is_payment_enabled: boolean;
   payment_deadline: string | null;
   registration_start_date: string | null;
+  registration_deadline: string | null;
+  registration_fee: number | null;
   participantCount: number;
   status: 'live' | 'upcoming' | 'ended';
   userStatus?: 'none' | 'paid' | 'registered';
+  submission_mode?: 'individual' | 'institutional';
 }
 
 export const EventsSection = () => {
@@ -97,9 +100,12 @@ export const EventsSection = () => {
             registration_open: event.registration_open === true,
             payment_deadline: event.payment_deadline,
             registration_start_date: event.registration_start_date,
+            registration_deadline: event.registration_deadline,
+            registration_fee: event.registration_fee,
             participantCount: count || 0,
             status,
             userStatus,
+            submission_mode: (event as any).submission_mode || 'individual',
           };
         })
       );

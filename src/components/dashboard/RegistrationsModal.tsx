@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, Eye, Trophy, Calendar, MoreVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -52,7 +52,7 @@ export const RegistrationsModal = ({ open, onOpenChange }: RegistrationsModalPro
           const regPhoneDigits = r.phone.replace(/\D/g, '').slice(-10);
           return regPhoneDigits === userPhone;
         }).slice(0, 50);
-        
+
         setRegistrations(
           regData.map(r => ({
             ...r,
@@ -71,10 +71,10 @@ export const RegistrationsModal = ({ open, onOpenChange }: RegistrationsModalPro
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -91,6 +91,9 @@ export const RegistrationsModal = ({ open, onOpenChange }: RegistrationsModalPro
           <DialogTitle className="text-2xl font-bold text-foreground">
             My Registrations
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            List of your competition registrations and their current status.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto">
@@ -136,8 +139,8 @@ export const RegistrationsModal = ({ open, onOpenChange }: RegistrationsModalPro
                         onClick={() => setSelectedRow(selectedRow === reg.id ? null : reg.id)}
                         className={cn(
                           "border-b border-border transition-colors cursor-pointer",
-                          selectedRow === reg.id 
-                            ? "bg-blue-500 text-white hover:bg-blue-600" 
+                          selectedRow === reg.id
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
                             : "hover:bg-muted/30 bg-white dark:bg-card"
                         )}
                       >
@@ -174,7 +177,7 @@ export const RegistrationsModal = ({ open, onOpenChange }: RegistrationsModalPro
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <button 
+                          <button
                             onClick={(e) => e.stopPropagation()}
                             className="p-1 rounded hover:bg-background/20 transition-colors"
                           >

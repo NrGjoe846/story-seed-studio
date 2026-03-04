@@ -23,6 +23,7 @@ interface EventCardProps {
         status: 'live' | 'upcoming' | 'ended';
         event_type?: 'school' | 'college' | 'both';
         userStatus?: 'none' | 'paid' | 'registered';
+        submission_mode?: 'individual' | 'institutional';
     };
     index?: number;
 }
@@ -169,6 +170,11 @@ export const EventCard = ({ event, index = 0 }: EventCardProps) => {
                                 }
 
                                 if (isPayEnabled || isFree) {
+                                    // Hide buttons for institutional events
+                                    if (event.submission_mode === 'institutional') {
+                                        return null;
+                                    }
+
                                     return (
                                         <Link to={isFree ? `/register?eventId=${event.id}&isFree=true` : `/pay-event/${event.id}`} className="flex-1">
                                             <Button variant="hero" className="w-full group bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90 h-11">

@@ -3,7 +3,7 @@ import { Eye, Edit, Trash2, X, Check, Trophy, Lock, Unlock, Upload, CreditCard, 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase, getSafeImageUrl } from '@/integrations/supabase/client';
 
@@ -412,6 +412,9 @@ const AdminCompetitions = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{selectedEvent?.name}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Competition details and participant list for {selectedEvent?.name}.
+            </DialogDescription>
           </DialogHeader>
           {selectedEvent && (
             <div className="space-y-4">
@@ -479,6 +482,9 @@ const AdminCompetitions = () => {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Competition</DialogTitle>
+            <DialogDescription className="sr-only">
+              Form to edit competition settings, registration dates, and fees.
+            </DialogDescription>
           </DialogHeader>
           {editEvent && (
             <div className="space-y-4">
@@ -610,6 +616,9 @@ const AdminCompetitions = () => {
             <DialogTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-yellow-500" /> Announce Winners
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Select the first, second, and third place winners for this competition.
+            </DialogDescription>
           </DialogHeader>
           {winnersDialog && (
             <div className="space-y-4">
@@ -696,6 +705,9 @@ const AdminCompetitions = () => {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete Competition?</DialogTitle>
+            <DialogDescription className="sr-only">
+              Confirmation dialog to permanently delete the competition and all its data.
+            </DialogDescription>
           </DialogHeader>
           <p className="text-muted-foreground">This action cannot be undone. All related data will be permanently deleted.</p>
           <div className="flex gap-2 justify-end">

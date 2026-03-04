@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -80,8 +80,8 @@ const JudgeDashboard = () => {
 
       const todayVotes = votes?.filter(v => new Date(v.created_at) >= today) || [];
       const totalVotes = votes?.length || 0;
-      const avgScoreCalc = totalVotes > 0 
-        ? (votes?.reduce((sum, v) => sum + v.score, 0) || 0) / totalVotes 
+      const avgScoreCalc = totalVotes > 0
+        ? (votes?.reduce((sum, v) => sum + v.score, 0) || 0) / totalVotes
         : 0;
 
       setReviewedToday(todayVotes.length);
@@ -137,11 +137,11 @@ const JudgeDashboard = () => {
             .eq('event_id', event.id);
 
           const totalParticipants = registrations?.length || 0;
-          
+
           // Calculate selected (score >= 5) and rejected (score < 5) by this judge for this event
           const eventRegistrationIds = registrations?.map(r => r.id) || [];
           const judgeVotesForEvent = votes?.filter(v => eventRegistrationIds.includes(v.registration_id)) || [];
-          
+
           const selectedByJudge = judgeVotesForEvent.filter(v => v.score >= 5).length;
           const rejectedByJudge = judgeVotesForEvent.filter(v => v.score < 5).length;
 
@@ -314,7 +314,7 @@ const JudgeDashboard = () => {
           Welcome, Judge {user?.name?.split(' ')[0]}! ⚖️
         </h1>
         <p className="text-secondary-foreground/80">
-          {pendingReviews > 0 
+          {pendingReviews > 0
             ? `You have ${pendingReviews} pending submissions awaiting your review.`
             : 'All caught up! No pending submissions.'}
         </p>
@@ -442,11 +442,10 @@ const JudgeDashboard = () => {
                     </p>
                   </div>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      review.status === 'Approved'
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${review.status === 'Approved'
                         ? 'bg-green-100 text-green-700'
                         : 'bg-red-100 text-red-700'
-                    }`}
+                      }`}
                   >
                     {review.status}
                   </span>
@@ -518,6 +517,9 @@ const JudgeDashboard = () => {
             <DialogTitle className="font-display text-2xl">
               {selectedParticipant?.storyTitle}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Voting panel for the story {selectedParticipant?.storyTitle}.
+            </DialogDescription>
           </DialogHeader>
 
           {selectedParticipant && (

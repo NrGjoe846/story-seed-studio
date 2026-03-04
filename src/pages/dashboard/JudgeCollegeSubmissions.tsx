@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
@@ -191,7 +191,7 @@ const JudgeCollegeSubmissions = () => {
           Book Writing
         </Badge>
       </div>
-      
+
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -252,11 +252,10 @@ const JudgeCollegeSubmissions = () => {
             {selectedEvent?.participants?.map((participant) => (
               <div
                 key={participant.id}
-                className={`flex items-center gap-3 rounded-xl border p-3 ${
-                  participant.hasVoted 
-                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                className={`flex items-center gap-3 rounded-xl border p-3 ${participant.hasVoted
+                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
                     : 'bg-muted/40 border-border/60'
-                }`}
+                  }`}
               >
                 <Avatar className="w-10 h-10">
                   <AvatarImage src={participant.photo} alt={participant.name} />
@@ -307,6 +306,9 @@ const JudgeCollegeSubmissions = () => {
             <DialogTitle className="font-display text-2xl">
               {selectedParticipant?.storyTitle}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Review and scoring panel for college book submission: {selectedParticipant?.storyTitle}.
+            </DialogDescription>
           </DialogHeader>
 
           {selectedParticipant && (
