@@ -32,11 +32,13 @@ const AdminProfile = () => {
       if (!user?.id) return;
 
       // Fetch profile
-      const { data: profileData } = await supabase
+      const { data: profileDataArr } = await supabase
         .from('profiles')
         .select('name, phone, city, bio')
         .eq('id', user.id)
-        .single();
+        .limit(1);
+      
+      const profileData = profileDataArr?.[0];
 
       if (profileData) {
         setProfile({

@@ -41,11 +41,13 @@ const UserProfile = () => {
     if (!user?.id) return;
 
     const fetchProfile = async () => {
-      const { data, error } = await supabase
+      const { data: profileArr, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .limit(1);
+
+      const data = profileArr?.[0];
 
       if (!error && data) {
         setProfile({

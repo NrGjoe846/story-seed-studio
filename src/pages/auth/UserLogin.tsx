@@ -23,12 +23,13 @@ const UserLogin = () => {
         localStorage.setItem('story_seed_user_id', session.user.id);
         
         // Try to get user name from registrations
-        const { data: registration } = await supabase
+        const { data: registrationArr } = await supabase
           .from('registrations')
           .select('first_name')
           .eq('email', session.user.email || '')
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
+        
+        const registration = registrationArr?.[0];
         
         if (registration?.first_name) {
           localStorage.setItem('story_seed_user_name', registration.first_name);
