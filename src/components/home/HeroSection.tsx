@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import AnimatedBlobCard from './AnimatedBlobCard';
 
@@ -9,9 +10,20 @@ interface LeaderQuote {
   title: string;
   image: string;
   quote: string;
+  link?: string;
+  blur?: boolean;
 }
 
 const leaderQuotes: LeaderQuote[] = [
+  {
+    id: 0,
+    name: 'City Public School',
+    title: 'School Event 2024',
+    image: '/assets/school-event.jpg',
+    quote: 'Empowering students to find their voice and share their unique stories.',
+    link: '/gallery',
+    blur: true
+  },
   {
     id: 1,
     name: 'C. Subramania Bharati',
@@ -104,7 +116,7 @@ export const HeroSection = () => {
       </div>
 
       <div className="container mx-auto px-4 relative z-20 pt-[140px] md:pt-[120px] pb-12">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="grid lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-16 items-center">
           {/* Left Content - Quote */}
           <div className="space-y-8 text-left order-2 lg:order-1">
             <div key={currentSlide} className="animate-fade-in">
@@ -154,36 +166,65 @@ export const HeroSection = () => {
 
           {/* Right Slider - Leader Images */}
           <div className="relative order-1 lg:order-2">
-            <AnimatedBlobCard className="max-w-md mx-auto aspect-square">
-              {leaderQuotes.map((leader, index) => (
-                <div
-                  key={leader.id}
-                  className={cn(
-                    'absolute inset-0 transition-all duration-700 ease-in-out',
-                    index === currentSlide
-                      ? 'opacity-100 scale-100'
-                      : 'opacity-0 scale-105'
-                  )}
-                >
-                  <img
-                    src={leader.image}
-                    alt={leader.name}
-                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                  />
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            <AnimatedBlobCard className="max-w-xl mx-auto aspect-square">
+              {leaderQuotes.map((leader, index) => {
+                const isCurrent = index === currentSlide;
+                const SlideContent = (
+                  <div className="relative w-full h-full">
+                    <img
+                      src={leader.image}
+                      alt={leader.name}
+                      className={cn(
+                        "w-full h-full object-cover transition-all duration-500",
+                        leader.blur ? "blur-sm hover:blur-none" : "grayscale hover:grayscale-0"
+                      )}
+                    />
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-                  {/* Name Badge at Bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-                    <h3 className="font-display text-2xl md:text-3xl font-bold text-white">
-                      {leader.name}
-                    </h3>
-                    <p className="text-sm md:text-base text-white/80">
-                      {leader.title}
-                    </p>
+                    {/* Name Badge at Bottom */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
+                      <h3 className="font-display text-2xl md:text-3xl font-bold text-white">
+                        {leader.name}
+                      </h3>
+                      <p className="text-sm md:text-base text-white/80">
+                        {leader.title}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+
+                if (leader.link) {
+                  return (
+                    <Link
+                      key={leader.id}
+                      to={leader.link}
+                      className={cn(
+                        'absolute inset-0 transition-all duration-700 ease-in-out block',
+                        isCurrent
+                          ? 'opacity-100 scale-100 z-10'
+                          : 'opacity-0 scale-105 z-0'
+                      )}
+                    >
+                      {SlideContent}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div
+                    key={leader.id}
+                    className={cn(
+                      'absolute inset-0 transition-all duration-700 ease-in-out',
+                      isCurrent
+                        ? 'opacity-100 scale-100 z-10'
+                        : 'opacity-0 scale-105 z-0'
+                    )}
+                  >
+                    {SlideContent}
+                  </div>
+                );
+              })}
 
               {/* Navigation Arrows */}
               {leaderQuotes.length > 1 && (
