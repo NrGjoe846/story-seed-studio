@@ -38,11 +38,13 @@ const JudgeProfile = () => {
       if (!user?.id) return;
 
       // Fetch profile
-      const { data: profileData } = await supabase
+      const { data: profileDataArr } = await supabase
         .from('profiles')
         .select('name, phone, city')
         .eq('id', user.id)
-        .single();
+        .limit(1);
+      
+      const profileData = profileDataArr?.[0];
 
       if (profileData) {
         setProfile({
@@ -53,11 +55,13 @@ const JudgeProfile = () => {
       }
 
       // Fetch judge settings
-      const { data: settingsData } = await supabase
+      const { data: settingsDataArr } = await supabase
         .from('judge_settings')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .limit(1);
+      
+      const settingsData = settingsDataArr?.[0];
 
       if (settingsData) {
         setSettings({

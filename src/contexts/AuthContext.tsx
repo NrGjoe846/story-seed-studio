@@ -35,18 +35,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUserData = useCallback(async (supabaseUser: SupabaseUser): Promise<User | null> => {
     try {
       // Fetch user role
-      const { data: roleData } = await supabase
+      const { data: roleDataArr } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', supabaseUser.id)
-        .single();
+        .limit(1);
+      
+      const roleData = roleDataArr?.[0];
 
       // Fetch user profile
-      const { data: profileData } = await supabase
+      const { data: profileDataArr } = await supabase
         .from('profiles')
         .select('name, avatar')
         .eq('id', supabaseUser.id)
-        .single();
+        .limit(1);
+      
+      const profileData = profileDataArr?.[0];
 
       const role = (roleData?.role as UserRole) || 'user';
       const name = profileData?.name || supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User';
@@ -158,11 +162,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Fetch the user's actual role from the database
-      const { data: roleData, error: roleError } = await supabase
+      const { data: roleDataArr, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', data.user.id)
-        .single();
+        .limit(1);
+
+      const roleData = roleDataArr?.[0];
 
       if (roleError || !roleData) {
         // User has no role assigned - sign out

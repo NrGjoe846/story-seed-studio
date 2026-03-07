@@ -61,19 +61,23 @@ const Events = () => {
           // Check if user has already paid/registered
           let userStatus: 'none' | 'paid' | 'registered' = 'none';
           if (currentUserId) {
-            const { data: reg } = await supabase
+            const { data: regArr } = await supabase
               .from('registrations')
               .select('payment_status, story_title')
               .eq('event_id', event.id)
               .eq('user_id', currentUserId)
-              .maybeSingle();
+              .limit(1);
+            
+            const reg = regArr?.[0];
 
-            const { data: clgReg } = await supabase
+            const { data: clgRegArr } = await supabase
               .from('clg_registrations')
               .select('payment_status, story_title')
               .eq('event_id', event.id)
               .eq('user_id', currentUserId)
-              .maybeSingle();
+              .limit(1);
+            
+            const clgReg = clgRegArr?.[0];
 
             const existingReg = reg || clgReg;
             if (existingReg) {

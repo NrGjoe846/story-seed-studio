@@ -85,11 +85,13 @@ const PaymentPortal = () => {
 
       if (!eventId) return;
 
-      const { data, error } = await supabase
+      const { data: eventArr, error } = await supabase
         .from('events')
         .select('*')
         .eq('id', eventId)
-        .single();
+        .limit(1);
+
+      const data = eventArr?.[0];
 
       if (error || !data) {
         toast({
@@ -103,19 +105,23 @@ const PaymentPortal = () => {
       setEvent(data);
 
       // 3. New: Check if user already has a registration
-      const { data: existingReg } = await supabase
+      const { data: existingRegArr } = await supabase
         .from('registrations')
         .select('unique_key, payment_status')
         .eq('event_id', eventId)
         .eq('user_id', session.user.id)
-        .maybeSingle();
+        .limit(1);
 
-      const { data: existingClgReg } = await supabase
+      const existingReg = existingRegArr?.[0];
+
+      const { data: existingClgRegArr } = await supabase
         .from('clg_registrations')
         .select('unique_key, payment_status')
         .eq('event_id', eventId)
         .eq('user_id', session.user.id)
-        .maybeSingle();
+        .limit(1);
+
+      const existingClgReg = existingClgRegArr?.[0];
 
       const reg = existingReg || existingClgReg;
 
