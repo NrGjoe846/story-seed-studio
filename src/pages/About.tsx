@@ -145,7 +145,7 @@ const About = () => {
                 <div className="relative aspect-square w-full max-w-[420px] rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary/20 to-secondary/20">
                   <img
                     src="/about-hero.jpg"
-                    alt="Story Seeds"
+                    alt="Story Seed"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -157,7 +157,7 @@ const About = () => {
                   We help on creating storytelling platform
                 </h2>
                 <p className="text-muted-foreground leading-relaxed text-sm sm:text-base">
-                 Story Seeds is a creative storytelling platform dedicated to nurturing children’s imagination, confidence, and communication skills. We believe every child is born with a spark of curiosity and creativity, and our mission is to give that spark a stage to shine. More than just a fun activity, storytelling at Story Seeds is a powerful developmental tool that helps shape a child’s thinking, emotional growth, and self-expression, providing them with the encouragement and space to share the rich inner worlds of ideas, feelings, and dreams they carry within.
+                 Story Seed is a creative storytelling platform dedicated to nurturing children’s imagination, confidence, and communication skills. We believe every child is born with a spark of curiosity and creativity, and our mission is to give that spark a stage to shine. More than just a fun activity, storytelling at Story Seed is a powerful developmental tool that helps shape a child’s thinking, emotional growth, and self-expression, providing them with the encouragement and space to share the rich inner worlds of ideas, feelings, and dreams they carry within.
                 </p>
               </div>
             </div>
@@ -204,21 +204,21 @@ const About = () => {
                 {activeTab === 'mission' && (
                   <div className="space-y-3">
                     <p>
-                      In today's fast-moving world, children spend more time consuming content than creating it. Story Seeds changes that. We encourage children to speak, imagine, narrate, explore ideas, and find their own voice. With guided topics, interactive prompts, story themes, and monthly challenges, children learn to think freely, communicate clearly, and develop self-confidence from an early age.
+                      In today's fast-moving world, children spend more time consuming content than creating it. Story Seed changes that. We encourage children to speak, imagine, narrate, explore ideas, and find their own voice. With guided topics, interactive prompts, story themes, and monthly challenges, children learn to think freely, communicate clearly, and develop self-confidence from an early age.
                     </p>
                     <p>
-                      Parents play a major role in this journey. Story Seeds provides a safe, secure, and joyful space where parents can record and upload their children's storytelling videos. These videos become priceless memories — a treasure of childhood moments that families can watch for years.
+                      Parents play a major role in this journey. Story Seed provides a safe, secure, and joyful space where parents can record and upload their children's storytelling videos. These videos become priceless memories — a treasure of childhood moments that families can watch for years.
                     </p>
                   </div>
                 )}
                 {activeTab === 'vision' && (
                   <p>
-                    To become the world's leading creative space where every child discovers the power of their voice, imagination, and storytelling. We envision millions of children developing confidence, communication skills, and leadership qualities through the simple joy of telling a story. Story Seeds aims to grow into a global family where creativity is valued, imagination is celebrated, and every child is given a platform to shine.
+                    To become the world's leading creative space where every child discovers the power of their voice, imagination, and storytelling. We envision millions of children developing confidence, communication skills, and leadership qualities through the simple joy of telling a story. Story Seed aims to grow into a global family where creativity is valued, imagination is celebrated, and every child is given a platform to shine.
                   </p>
                 )}
                 {activeTab === 'values' && (
                   <p>
-                    Story Seeds is built with love, passion, and dedication by a team of educators, content creators, designers, and child-development supporters. Together, we are building a global community where children can connect, express, and grow. We celebrate young creativity through the Little Voices Awards, honoring children for their storytelling talent, imagination, clarity, expression, and courage.
+                    Story Seed is built with love, passion, and dedication by a team of educators, content creators, designers, and child-development supporters. Together, we are building a global community where children can connect, express, and grow. We celebrate young creativity through the Little Voices Awards, honoring children for their storytelling talent, imagination, clarity, expression, and courage.
                   </p>
                 )}
               </div>
@@ -235,7 +235,7 @@ const About = () => {
               Take A Vital Look At Our Application working
             </h2>
             <p className="text-muted-foreground mb-6 text-sm sm:text-base text-center max-w-3xl mx-auto">
-              By accessing and using the Story Seeds platform, you agree to be bound by these Terms of Service.
+              By accessing and using the Story Seed platform, you agree to be bound by these Terms of Service.
             </p>
             <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl bg-black group">
               {!isVideoPlaying ? (
