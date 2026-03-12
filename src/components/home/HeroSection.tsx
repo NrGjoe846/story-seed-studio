@@ -19,7 +19,7 @@ const leaderQuotes: LeaderQuote[] = [
     id: 0,
     name: 'Mercury Matric hr sec school',
     title: 'Rising Little Voice Event Completion',
-    image: '/assets/mercury-school.JPG',
+    image: '/assets/IMG_9730.JPG',
     quote: 'A celebration of young voices and storytelling excellence at Mercury School.',
     link: '/gallery',
     blur: false
@@ -163,14 +163,7 @@ export const HeroSection = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
                     {/* Name Badge at Bottom */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-                      <h3 className="font-display text-2xl md:text-3xl font-bold text-white">
-                        {leader.name}
-                      </h3>
-                      <p className="text-sm md:text-base text-white/80">
-                        {leader.title}
-                      </p>
-                    </div>
+
                   </div>
                 );
 
