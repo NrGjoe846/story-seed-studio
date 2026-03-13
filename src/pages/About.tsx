@@ -256,19 +256,17 @@ const About = () => {
                   </button>
                 </>
               ) : (
-                <video
-                  ref={videoRef}
-                  controls
-                  autoPlay
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src="https://www.youtube.com/embed/tLqqvNka_bE?si=8FIDiIiFBEi_23kN&autoplay=1"
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
                   className="w-full h-full"
-                  onEnded={() => setIsVideoPlaying(false)}
-                >
-                  <source
-                    src="/ss.mp4"
-                    type="video/mp4"
-                  />
-                  Your browser does not support the video tag.
-                </video>
+                ></iframe>
               )}
             </div>
           </div>
