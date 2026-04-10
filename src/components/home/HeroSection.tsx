@@ -1,227 +1,180 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import AnimatedBlobCard from './AnimatedBlobCard';
-
-interface LeaderQuote {
-  id: number;
-  name: string;
-  title: string;
-  image: string;
-  quote: string;
-  link?: string;
-  blur?: boolean;
-}
-
-const leaderQuotes: LeaderQuote[] = [
-  {
-    id: 0,
-    name: 'Mercury Matric hr sec school',
-    title: 'Rising Little Voice Event Completion',
-    image: '/assets/IMG_9730.JPG',
-    quote: 'A celebration of young voices and storytelling excellence at Mercury School.',
-    link: '/gallery',
-    blur: false
-  }
-];
+import { motion } from 'framer-motion';
+import { ZoomParallax } from "@/components/ui/zoom-parallax";
+import { StatsSection } from "./StatsSection";
+import { supabase, getSafeImageUrl } from '@/integrations/supabase/client';
 
 export const HeroSection = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [images, setImages] = useState<{ src: string, alt: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ schools: 0, students: 0 });
+
+  const fallbackImages = [
+    {
+      src: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=1200&auto=format&fit=crop',
+      alt: 'Children reading together in a cozy library',
+    },
+    {
+      src: 'https://images.unsplash.com/photo-1507730997172-2dad04b44614?q=80&w=1200&auto=format&fit=crop',
+      alt: 'Classic library with high bookshelves and warm lighting',
+    },
+    {
+      src: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=1200&auto=format&fit=crop',
+      alt: 'Handwriting in a notebook, creative process',
+    },
+    {
+      src: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=1200&auto=format&fit=crop',
+      alt: 'Diverse group of people sharing stories',
+    },
+    {
+      src: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?q=80&w=1200&auto=format&fit=crop',
+      alt: 'Antique books stacked on a wooden table',
+    },
+    {
+      src: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?q=80&w=1200&auto=format&fit=crop',
+      alt: 'Close up of art supplies and creativity',
+    },
+    {
+      src: 'https://images.unsplash.com/photo-1502945015378-0e284ca1c5be?q=80&w=1200&auto=format&fit=crop',
+      alt: 'Modern studio workspace for storytellers',
+    },
+  ];
 
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    // 2. Fetch Gallery Images from Supabase
+    const fetchGalleryImages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('gallery_images')
+          .select('title, image_url, event_images')
+          .order('created_at', { ascending: false });
 
-    const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % leaderQuotes.length);
-    }, 6000); // Change slide every 6 seconds
+        if (error) throw error;
 
-    return () => clearInterval(timer);
-  }, [isAutoPlaying]);
+        if (data && data.length > 0) {
+          // Collect all unique images from main image and event highlights
+          const allImageUrls: { src: string, alt: string }[] = [];
 
-  const nextSlide = () => {
-    setCurrentSlide(prev => (prev + 1) % leaderQuotes.length);
-    setIsAutoPlaying(false);
-  };
+          data.forEach(item => {
+            if (item.image_url) {
+              allImageUrls.push({
+                src: getSafeImageUrl(item.image_url),
+                alt: item.title || 'Gallery image'
+              });
+            }
+            if (item.event_images && Array.isArray(item.event_images)) {
+              item.event_images.forEach(img => {
+                allImageUrls.push({
+                  src: getSafeImageUrl(img),
+                  alt: item.title || 'Event highlights'
+                });
+              });
+            }
+          });
 
-  const prevSlide = () => {
-    setCurrentSlide(prev => (prev - 1 + leaderQuotes.length) % leaderQuotes.length);
-    setIsAutoPlaying(false);
-  };
+          // Mix and pick 7 images
+          const shuffled = allImageUrls.sort(() => Math.random() - 0.5);
+          const selected = shuffled.slice(0, 7);
 
-  const currentQuote = leaderQuotes[currentSlide];
+          // If we have fewer than 7, pad with fallbacks
+          if (selected.length < 7) {
+            const padded = [...selected, ...fallbackImages.slice(selected.length)];
+            setImages(padded);
+          } else {
+            setImages(selected);
+          }
+        } else {
+          setImages(fallbackImages);
+        }
+      } catch (err) {
+        console.error('Error fetching images for hero:', err);
+        setImages(fallbackImages);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // 3. Fetch Impact Statistics
+    const fetchStats = async () => {
+      try {
+        const { count: schoolRegCount } = await supabase
+          .from('registrations')
+          .select('*', { count: 'exact', head: true });
+        
+        const { count: clgRegCount } = await supabase
+          .from('clg_registrations')
+          .select('*', { count: 'exact', head: true });
+
+        const { data: institutions } = await supabase
+          .from('profiles')
+          .select('institution')
+          .not('institution', 'is', null);
+
+        const { data: colleges } = await supabase
+          .from('clg_registrations')
+          .select('college_name')
+          .not('college_name', 'is', null);
+
+        const uniqueInstitutions = new Set([
+          ...(institutions?.map(i => i.institution) || []),
+          ...(colleges?.map(c => c.college_name) || [])
+        ]);
+
+        setStats({
+          students: (schoolRegCount || 0) + (clgRegCount || 0),
+          schools: uniqueInstitutions.size
+        });
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+      }
+    };
+
+    fetchGalleryImages();
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-gray-50">
-      {/* Gradient Background - Matching header gradient (Red to Orange to Gold) */}
-      {/* Extended to cover full section including top navigation area */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Gradient overlay */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(to right, hsl(0, 72%, 36%) 0%, hsl(20, 90%, 55%) 50%, hsl(45, 100%, 51%) 100%)',
-            opacity: 0.15
-          }}
-        />
+    <main className="bg-white min-h-screen w-full selection:bg-black selection:text-white">
+      {/* Intro Section */}
+      <div
+        className="relative flex h-screen items-start justify-center px-4 overflow-hidden bg-cover bg-[center_top]"
+        style={{ backgroundImage: "url('/assets/Untitled design (10).png')" }}
+      >
+        <div className="relative z-10 max-w-4xl text-center pt-24 md:pt-32">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif italic font-light tracking-tight text-slate-900 leading-[1.1] mb-8 drop-shadow-sm">
+              Every Story <br />
+              <span className="text-slate-700">Starts with a Seed.</span>
+            </h1>
 
-        <svg
-          className="absolute w-full h-full"
-          viewBox="0 0 1440 900"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style={{ stopColor: '#9e1a1a', stopOpacity: 0.6 }} />
-              <stop offset="50%" style={{ stopColor: '#F57C00', stopOpacity: 0.5 }} />
-              <stop offset="100%" style={{ stopColor: '#FFC107', stopOpacity: 0.6 }} />
-            </linearGradient>
-          </defs>
-
-          {/* Top Right Curve */}
-          <path
-            d="M1440 0V450C1300 400 1200 100 1000 0H1440Z"
-            fill="url(#heroGradient)"
-          />
-
-          {/* Bottom Swoosh */}
-          <path
-            d="M0 900H1440V650C1100 800 800 750 400 880L0 900Z"
-            fill="url(#heroGradient)"
-          />
-        </svg>
-      </div>
-
-      <div className="container mx-auto px-4 relative z-20 pt-[140px] md:pt-[120px] pb-12">
-        <div className="grid lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-16 items-center">
-          {/* Left Content - Quote */}
-          <div className="space-y-8 text-left order-2 lg:order-1">
-            <div key={currentSlide} className="animate-fade-in">
-              {/* Quote Icon */}
-              <Quote className="w-16 h-16 text-primary/20 mb-6" />
-
-              {/* Quote Text */}
-              <blockquote className="space-y-6">
-                <p className="font-display text-2xl md:text-3xl lg:text-4xl font-bold leading-relaxed text-foreground italic">
-                  "{currentQuote.quote}"
-                </p>
-
-                {/* Author Info */}
-                <footer className="space-y-2">
-                  <cite className="not-italic">
-                    <div className="font-display text-xl md:text-2xl font-semibold text-primary">
-                      — {currentQuote.name}
-                    </div>
-                    <div className="text-base md:text-lg text-muted-foreground">
-                      {currentQuote.title}
-                    </div>
-                  </cite>
-                </footer>
-              </blockquote>
-            </div>
-
-            {/* Dots Indicator - Only show if multiple slides */}
-            {leaderQuotes.length > 1 && (
-              <div className="flex gap-3 pt-4">
-                {leaderQuotes.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setCurrentSlide(index);
-                      setIsAutoPlaying(false);
-                    }}
-                    className={cn(
-                      'h-2 rounded-full transition-all duration-300',
-                      index === currentSlide
-                        ? 'w-12 bg-primary shadow-lg'
-                        : 'w-2 bg-muted-foreground/40 hover:bg-muted-foreground/60'
-                    )}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Right Slider - Leader Images */}
-          <div className="relative order-1 lg:order-2">
-            <AnimatedBlobCard className="max-w-3xl mx-auto aspect-video">
-              {leaderQuotes.map((leader, index) => {
-                const isCurrent = index === currentSlide;
-                const SlideContent = (
-                  <div className="relative w-full h-full">
-                    <img
-                      src={leader.image}
-                      alt={leader.name}
-                      className={cn(
-                        "w-full h-full object-cover transition-all duration-500"
-                      )}
-                    />
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-
-                    {/* Name Badge at Bottom */}
-
-                  </div>
-                );
-
-                if (leader.link) {
-                  return (
-                    <Link
-                      key={leader.id}
-                      to={leader.link}
-                      className={cn(
-                        'absolute inset-0 transition-all duration-700 ease-in-out block',
-                        isCurrent
-                          ? 'opacity-100 scale-100 z-10'
-                          : 'opacity-0 scale-105 z-0'
-                      )}
-                    >
-                      {SlideContent}
-                    </Link>
-                  );
-                }
-
-                return (
-                  <div
-                    key={leader.id}
-                    className={cn(
-                      'absolute inset-0 transition-all duration-700 ease-in-out',
-                      isCurrent
-                        ? 'opacity-100 scale-100 z-10'
-                        : 'opacity-0 scale-105 z-0'
-                    )}
-                  >
-                    {SlideContent}
-                  </div>
-                );
-              })}
-
-              {/* Navigation Arrows */}
-              {leaderQuotes.length > 1 && (
-                <>
-                  <button
-                    onClick={prevSlide}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg flex items-center justify-center hover:bg-background hover:scale-110 transition-all"
-                    aria-label="Previous slide"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-foreground" />
-                  </button>
-                  <button
-                    onClick={nextSlide}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg flex items-center justify-center hover:bg-background hover:scale-110 transition-all"
-                    aria-label="Next slide"
-                  >
-                    <ChevronRight className="w-5 h-5 text-foreground" />
-                  </button>
-                </>
-              )}
-            </AnimatedBlobCard>
-          </div>
+          </motion.div>
         </div>
       </div>
-    </section>
+
+      {/* Impact Statistics Section */}
+      <StatsSection schoolsCount={stats.schools} studentsCount={stats.students} />
+
+      {/* Main Parallax Effect with Dynamic Images */}
+      <section className="relative z-0">
+        <ZoomParallax images={images} />
+      </section>
+
+      {/* Transition Section to next content */}
+      <div className="h-[20vh] bg-white flex items-center justify-center">
+        <div className="h-[1px] w-32 bg-slate-200" />
+      </div>
+    </main>
   );
 };

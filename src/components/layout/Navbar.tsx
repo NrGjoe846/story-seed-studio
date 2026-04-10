@@ -234,21 +234,21 @@ export const Navbar = () => {
     <nav style={{
       transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
     }} className={cn('fixed top-0 left-0 right-0 z-50 border-b',
-      scrolled ? 'py-2 bg-white backdrop-blur-lg border-border/60 shadow-md' : 'py-4 bg-transparent border-transparent shadow-none')}>
+      scrolled ? 'py-1.5 bg-white backdrop-blur-lg border-border/60 shadow-md' : 'py-3 bg-transparent border-transparent shadow-none')}>
       <div className="container mx-auto px-3 sm:px-4 max-w-7xl">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center group">
-            <div className="h-10 sm:h-12 px-2 sm:px-4 py-1 bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 shadow-md overflow-hidden">
-              <img src="/assets/logo.png" alt="Story Seed Studio" className="h-10 sm:h-12 w-auto scale-150" />
+            <div className="h-8 sm:h-10 px-2 sm:px-3 py-1 bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 shadow-md overflow-hidden">
+              <img src="/assets/logo.png" alt="Story Seed Studio" className="h-8 sm:h-10 w-auto scale-150" />
             </div>
           </Link>
 
           {/* Desktop Navigation - Floating Pill Style */}
-          <div className="hidden lg:flex items-center p-1.5 rounded-full bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] border border-white/10 shadow-sm ml-8">
+          <div className="hidden lg:flex items-center p-1 rounded-full bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] border border-white/10 shadow-sm ml-8">
             {navLinks.map(link => {
               const isActive = location.pathname === link.path;
-              return <Link key={link.path} to={link.path} onClick={() => handleNavClick(link.path)} onMouseEnter={() => setHoveredPath(link.path)} onMouseLeave={() => setHoveredPath(location.pathname)} className="relative px-5 py-2 rounded-full text-sm font-medium transition-colors">
+              return <Link key={link.path} to={link.path} onClick={() => handleNavClick(link.path)} onMouseEnter={() => setHoveredPath(link.path)} onMouseLeave={() => setHoveredPath(location.pathname)} className="relative px-4 py-1.5 rounded-full text-[13.5px] font-medium transition-colors">
                 {/* Animated Background */}
                 {hoveredPath === link.path && <motion.div layoutId="navbar-pill" className="absolute inset-0 bg-white rounded-full" transition={{
                   type: "spring",

@@ -138,13 +138,15 @@ export const Footer = () => {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-primary-foreground/10 mt-8 sm:mt-12 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
-        <p className="text-primary-foreground/50 text-xs sm:text-sm text-center sm:text-left">
+      <div className="border-t border-primary-foreground/10 mt-8 sm:mt-12 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
+        <p className="text-primary-foreground/50 text-[10px] sm:text-xs tracking-wide text-center sm:text-left">
           © {new Date().getFullYear()} Story Seed Studio. All rights reserved.
         </p>
-        <p className="text-primary-foreground/50 text-xs sm:text-sm text-center sm:text-right">
 
-        </p>
+        <div className="flex items-center gap-1.5 text-primary-foreground/30 text-[9px] sm:text-[10px] tracking-[0.3em] uppercase font-medium">
+          <span>Created by</span>
+          <span className="text-primary-foreground/60 tracking-[0.1em] font-bold">UNAI TECH</span>
+        </div>
       </div>
     </div>
   </footer>;

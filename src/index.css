@@ -122,12 +122,15 @@
   }
 
   html {
-    scroll-behavior: smooth;
+    /* Native smooth scroll conflicts with Lenis smooth scroll engine */
+    scroll-behavior: auto !important;
+    overscroll-behavior-y: none;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Poppins', sans-serif;
+    overscroll-behavior-y: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
