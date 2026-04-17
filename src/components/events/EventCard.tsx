@@ -141,81 +141,89 @@ export const EventCard = ({ event, index = 0 }: EventCardProps) => {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                            {(() => {
-                                if (event.userStatus === 'registered') {
-                                    return (
-                                        <Button variant="outline" className="flex-1 bg-green-500/10 text-green-600 border-green-500/20 cursor-default hover:bg-green-500/10 h-11">
-                                            <Check className="w-4 h-4 mr-2" /> Registered
-                                        </Button>
-                                    );
-                                }
-
-                                if (event.userStatus === 'paid') {
-                                    if (isRegEnabled) {
+                        {event.status === 'ended' ? (
+                            <div className="flex pt-2">
+                                <Button variant="outline" className="w-full opacity-60 cursor-not-allowed h-11 font-semibold bg-muted" disabled>
+                                    Event Ended
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                                {(() => {
+                                    if (event.userStatus === 'registered') {
                                         return (
-                                            <Link to={`/register?eventId=${event.id}`} className="flex-1">
-                                                <Button variant="hero" className="w-full group bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 h-11">
-                                                    Submit Story
+                                            <Button variant="outline" className="flex-1 bg-green-500/10 text-green-600 border-green-500/20 cursor-default hover:bg-green-500/10 h-11">
+                                                <Check className="w-4 h-4 mr-2" /> Registered
+                                            </Button>
+                                        );
+                                    }
+
+                                    if (event.userStatus === 'paid') {
+                                        if (isRegEnabled) {
+                                            return (
+                                                <Link to={`/register?eventId=${event.id}`} className="flex-1">
+                                                    <Button variant="hero" className="w-full group bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 h-11">
+                                                        Submit Story
+                                                        <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                                                    </Button>
+                                                </Link>
+                                            );
+                                        }
+                                        return (
+                                            <Button variant="outline" className="flex-1 bg-blue-500/10 text-blue-600 border-blue-500/20 cursor-default h-11">
+                                                Paid - Awaiting Submission
+                                            </Button>
+                                        );
+                                    }
+
+                                    if (isPayEnabled || isFree) {
+                                        // Hide buttons for institutional events
+                                        if (event.submission_mode === 'institutional') {
+                                            return null;
+                                        }
+
+                                        return (
+                                            <Link to={isFree ? `/register?eventId=${event.id}&isFree=true` : `/pay-event/${event.id}`} className="flex-1">
+                                                <Button variant="hero" className="w-full group bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90 h-11">
+                                                    {isFree ? 'Register Now' : 'Register Now'}
                                                     <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                                                 </Button>
                                             </Link>
                                         );
                                     }
-                                    return (
-                                        <Button variant="outline" className="flex-1 bg-blue-500/10 text-blue-600 border-blue-500/20 cursor-default h-11">
-                                            Paid - Awaiting Submission
-                                        </Button>
-                                    );
-                                }
 
-                                if (isPayEnabled || isFree) {
-                                    // Hide buttons for institutional events
-                                    if (event.submission_mode === 'institutional') {
-                                        return null;
+                                    if (isRegEnabled) {
+                                        return (
+                                            <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed h-11" disabled>
+                                                Payment Closed
+                                            </Button>
+                                        );
                                     }
 
                                     return (
-                                        <Link to={isFree ? `/register?eventId=${event.id}&isFree=true` : `/pay-event/${event.id}`} className="flex-1">
-                                            <Button variant="hero" className="w-full group bg-gradient-to-r from-[#9B1B1B] via-[#FF6B35] to-[#D4AF37] hover:opacity-90 h-11">
-                                                {isFree ? 'Register Now' : 'Register Now'}
-                                                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                                            </Button>
-                                        </Link>
-                                    );
-                                }
-
-                                if (isRegEnabled) {
-                                    return (
                                         <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed h-11" disabled>
-                                            Payment Closed
+                                            Registration Closed
                                         </Button>
                                     );
-                                }
+                                })()}
 
-                                return (
-                                    <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed h-11" disabled>
-                                        Registration Closed
-                                    </Button>
-                                );
-                            })()}
-
-                            {/* Secondary CTA: Voting / Details */}
-                            {event.event_type === 'school' ? (
-                                <Link to={`/voting/${event.id}`} className="flex-1">
-                                    <Button variant="outline" className="w-full group bg-white dark:bg-black/20 text-[#9B1B1B] hover:bg-[#9B1B1B] hover:text-white border-2 border-[#9B1B1B] transition-all duration-300 font-semibold h-11">
-                                        <Vote className="w-4 h-4 mr-2" />
-                                        Vote
-                                    </Button>
-                                </Link>
-                            ) : (
-                                <Link to={`/events`} className="flex-1">
-                                    <Button variant="outline" className="w-full h-11 border-border hover:bg-muted font-medium transition-colors">
-                                        View Details
-                                    </Button>
-                                </Link>
-                            )}
-                        </div>
+                                {/* Secondary CTA: Voting / Details */}
+                                {event.event_type === 'school' ? (
+                                    <Link to={`/voting/${event.id}`} className="flex-1">
+                                        <Button variant="outline" className="w-full group bg-white dark:bg-black/20 text-[#9B1B1B] hover:bg-[#9B1B1B] hover:text-white border-2 border-[#9B1B1B] transition-all duration-300 font-semibold h-11">
+                                            <Vote className="w-4 h-4 mr-2" />
+                                            Vote
+                                        </Button>
+                                    </Link>
+                                ) : (
+                                    <Link to={`/events`} className="flex-1">
+                                        <Button variant="outline" className="w-full h-11 border-border hover:bg-muted font-medium transition-colors">
+                                            View Details
+                                        </Button>
+                                    </Link>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
