@@ -17,18 +17,19 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 
 /**
- * Normalizes Supabase storage URLs to use the custom domain.
- * This handles cases where full URLs with the old domain might be stored in the database.
+ * Normalizes storage URLs: rewrites the old custom domain (api.storyseed.in)
+ * back to the real Supabase project host, since many URLs in the DB still
+ * reference the old domain which is no longer active.
  */
-export const getSafeImageUrl = (url: string | null | undefined) => {
+export const getSafeImageUrl = (url: string | null | undefined): string | undefined => {
   if (!url) return undefined;
-  if (typeof url !== 'string') return url;
+  if (typeof url !== 'string') return url as unknown as undefined;
 
-  const oldHost = 'womxlijnyxvfndbyxefc.supabase.co';
-  const customHost = 'api.storyseed.in';
+  const oldHost = 'api.storyseed.in';
+  const supabaseHost = 'womxlijnyxvfndbyxefc.supabase.co';
 
   if (url.includes(oldHost)) {
-    return url.replace(oldHost, customHost);
+    return url.replace(oldHost, supabaseHost);
   }
 
   return url;
